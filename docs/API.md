@@ -6,6 +6,8 @@
 https://api.subproject55.com
 ```
 
+All endpoints are prefixed with `/api/` (e.g., `/api/auth/login`).
+
 ## Authentication
 
 The API supports two authentication methods:
@@ -14,7 +16,7 @@ The API supports two authentication methods:
 
 ```bash
 # Login to get tokens
-POST /auth/login
+POST /api/auth/login
 Content-Type: application/x-www-form-urlencoded
 
 username=admin&password=yourpassword
@@ -34,7 +36,7 @@ Authorization: Bearer <access_token>
 
 ```bash
 # Generate API key via web interface or API
-POST /auth/api-keys
+POST /api/auth/api-keys
 Authorization: Bearer <access_token>
 
 {
@@ -45,13 +47,204 @@ Authorization: Bearer <access_token>
 X-API-Key: <api_key>
 ```
 
-## Endpoints
+---
 
-### Campaigns
+## Auth Endpoints
 
-#### List Campaigns
+### Login
 ```http
-GET /campaigns
+POST /api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=yourpassword
+```
+
+Response:
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "token_type": "bearer"
+}
+```
+
+### Refresh Token
+```http
+POST /api/auth/refresh
+Content-Type: application/x-www-form-urlencoded
+
+refresh_token=eyJ...
+```
+
+### Get Current User
+```http
+GET /api/auth/me
+Authorization: Bearer <access_token>
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "username": "admin",
+  "email": "admin@example.com",
+  "role": "admin",
+  "is_active": true,
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### Create API Key
+```http
+POST /api/auth/api-keys
+
+{
+  "name": "CLI Tool"
+}
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "name": "CLI Tool",
+  "key": "udk_abc123...",
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+Note: The `key` is only returned on creation. Store it securely.
+
+### List API Keys
+```http
+GET /api/auth/api-keys
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "name": "CLI Tool",
+    "created_at": "2024-01-15T10:00:00Z",
+    "last_used_at": "2024-01-16T14:30:00Z"
+  }
+]
+```
+
+### Revoke API Key
+```http
+DELETE /api/auth/api-keys/{key_id}
+```
+
+### Change Password
+```http
+POST /api/auth/change-password
+
+{
+  "current_password": "oldpassword",
+  "new_password": "newpassword123!"
+}
+```
+
+Password requirements:
+- Minimum 12 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one digit
+- At least one special character
+
+---
+
+## User Management (Admin Only)
+
+### List Users
+```http
+GET /api/auth/users
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "username": "operator1",
+    "email": "operator@example.com",
+    "role": "operator",
+    "is_active": true,
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+### Create User
+```http
+POST /api/auth/users
+
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "SecurePass123!",
+  "role": "operator"
+}
+```
+
+Available roles: `admin`, `operator`, `viewer`
+
+### Get User
+```http
+GET /api/auth/users/{user_id}
+```
+
+### Update User
+```http
+PUT /api/auth/users/{user_id}
+
+{
+  "email": "updated@example.com",
+  "role": "viewer",
+  "is_active": false
+}
+```
+
+### Delete User
+Deactivates the user account.
+```http
+DELETE /api/auth/users/{user_id}
+```
+
+### Reset User Password
+```http
+POST /api/auth/users/{user_id}/reset-password
+
+{
+  "new_password": "NewSecurePass123!"
+}
+```
+
+### List Available Roles
+```http
+GET /api/auth/roles
+```
+
+Response:
+```json
+{
+  "roles": [
+    {"name": "admin", "description": "Full access to all features"},
+    {"name": "operator", "description": "Can manage campaigns and drives"},
+    {"name": "viewer", "description": "Read-only access"}
+  ]
+}
+```
+
+---
+
+## Campaigns
+
+### List Campaigns
+```http
+GET /api/campaigns
 ```
 
 Response:
@@ -69,9 +262,9 @@ Response:
 ]
 ```
 
-#### Create Campaign
+### Create Campaign
 ```http
-POST /campaigns
+POST /api/campaigns
 
 {
   "name": "Q1 2024 Assessment",
@@ -86,19 +279,43 @@ POST /campaigns
 ```
 
 Landing Page Configuration:
-- `mode`: `"disabled"` (use profile settings), `"included"` (use built-in theme), or `"custom_url"`
-- `included_theme`: Theme name when using included mode. Available themes: `corporate`, `login`, `maintenance`, `helpdesk`, `hrportal`, `fileshare`, `training`, `banking`, `document`, `survey`, `onlyfans`
+- `mode`: `"disabled"`, `"included"` (built-in theme), or `"custom_url"`
+- `included_theme`: Theme name when using included mode
 - `custom_url`: Custom landing page URL when using `custom_url` mode
 - `delay_seconds`: Redirect delay in seconds (1-30, default: 3)
 
-#### Get Campaign Details
+### List Landing Page Themes
 ```http
-GET /campaigns/{id}
+GET /api/campaigns/landing-pages/themes
 ```
 
-#### Update Campaign
+Response:
+```json
+{
+  "themes": [
+    {"id": "corporate", "name": "Corporate Portal", "description": "Professional business page"},
+    {"id": "login", "name": "Login Page", "description": "Generic login form"},
+    {"id": "maintenance", "name": "Maintenance", "description": "Site maintenance notice"},
+    {"id": "helpdesk", "name": "IT Helpdesk", "description": "IT support portal"},
+    {"id": "hrportal", "name": "HR Portal", "description": "Human resources portal"},
+    {"id": "fileshare", "name": "File Share", "description": "File sharing service"},
+    {"id": "training", "name": "Training Portal", "description": "Corporate training"},
+    {"id": "banking", "name": "Banking", "description": "Financial services"},
+    {"id": "document", "name": "Document Viewer", "description": "Document preview"},
+    {"id": "survey", "name": "Survey", "description": "Feedback survey"},
+    {"id": "onlyfans", "name": "OnlyFans", "description": "Content creator page"}
+  ]
+}
+```
+
+### Get Campaign Details
 ```http
-PUT /campaigns/{id}
+GET /api/campaigns/{id}
+```
+
+### Update Campaign
+```http
+PUT /api/campaigns/{id}
 
 {
   "name": "Updated Name",
@@ -111,11 +328,33 @@ PUT /campaigns/{id}
 }
 ```
 
-See [Create Campaign](#create-campaign) for `landing_page_config` options.
-
-#### Get Campaign Statistics
+### Preview Campaign Deletion
+Shows what will be deleted (drives, tokens) before confirming.
 ```http
-GET /campaigns/{id}/stats
+GET /api/campaigns/{id}/delete-preview
+```
+
+Response:
+```json
+{
+  "campaign": {"id": "uuid", "name": "Q1 Assessment"},
+  "drives_count": 10,
+  "tokens_count": 45,
+  "triggers_count": 12,
+  "deployments_count": 8,
+  "warning": "This action cannot be undone"
+}
+```
+
+### Delete Campaign
+Deletes campaign and cascades to all drives, tokens, and deployments.
+```http
+DELETE /api/campaigns/{id}
+```
+
+### Get Campaign Statistics
+```http
+GET /api/campaigns/{id}/stats
 ```
 
 Response:
@@ -135,16 +374,16 @@ Response:
 
 ---
 
-### Profiles
+## Profiles
 
-#### List Profiles
+### List Profiles
 ```http
-GET /profiles
+GET /api/profiles
 ```
 
-#### Create Profile
+### Create Profile
 ```http
-POST /profiles
+POST /api/profiles
 
 {
   "name": "HR Payroll",
@@ -158,9 +397,35 @@ POST /profiles
 }
 ```
 
-#### Preview Profile
+### Get Profile
 ```http
-GET /profiles/{id}/preview
+GET /api/profiles/{id}
+```
+
+### Update Profile
+```http
+PUT /api/profiles/{id}
+
+{
+  "name": "Updated Name",
+  "description": "Updated description"
+}
+```
+
+### Delete Profile
+```http
+DELETE /api/profiles/{id}
+```
+
+### Toggle Profile Active Status
+```http
+POST /api/profiles/{id}/toggle
+```
+
+### Preview Profile
+Shows files and tokens that would be generated.
+```http
+GET /api/profiles/{id}/preview
 ```
 
 Response:
@@ -170,13 +435,49 @@ Response:
     {"name": "Payroll_Summary.docx", "type": "word"},
     {"name": "Benefits_Overview.xlsx", "type": "excel"}
   ],
-  "tokens": ["dns", "word", "excel"]
+  "tokens": ["dns", "word", "excel"],
+  "folders": ["Documents", "Photos"]
 }
 ```
 
-#### List Template Images
+### List Profile Templates
 ```http
-GET /profiles/template-images/list
+GET /api/profiles/templates/list
+```
+
+Response:
+```json
+[
+  {
+    "id": "it_department",
+    "name": "IT Department",
+    "category": "corporate",
+    "description": "IT support and network files"
+  }
+]
+```
+
+### Get Template Details
+```http
+GET /api/profiles/templates/{template_id}
+```
+
+### Create Profile from Template
+```http
+POST /api/profiles/from-template/{template_id}
+
+{
+  "name": "Custom IT Profile",
+  "url_config": {
+    "enabled": true,
+    "base_slug": "it-docs"
+  }
+}
+```
+
+### List Template Images
+```http
+GET /api/profiles/template-images/list
 ```
 
 Response:
@@ -185,35 +486,169 @@ Response:
   "templates": {
     "it_department": {
       "name": "IT Department",
-      "images": ["server_room.jpg", "network_diagram.jpg", "helpdesk_workspace.jpg"]
+      "images": ["server_room.jpg", "network_diagram.jpg"]
     },
     "social_creator": {
       "name": "Social Creator",
-      "images": ["beach_sunset.jpg", "coffee_shop.jpg", "mirror_selfie.jpg", "rooftop_city.jpg"]
+      "images": ["beach_sunset.jpg", "coffee_shop.jpg"]
     }
   }
 }
 ```
 
-#### Get Template Image
+### Get Template Image
 ```http
-GET /profiles/template-images/{template_id}/{filename}
+GET /api/profiles/template-images/{template_id}/{filename}
 ```
 
-Returns the AI-generated image file for a specific template.
+Returns the image file.
+
+### List Text Templates
+```http
+GET /api/profiles/text-templates/list
+```
+
+Response:
+```json
+[
+  {"id": "password_list", "name": "Password List", "description": "Fake credentials file"},
+  {"id": "meeting_notes", "name": "Meeting Notes", "description": "Corporate meeting notes"},
+  {"id": "project_notes", "name": "Project Notes", "description": "Technical documentation"},
+  {"id": "personal_notes", "name": "Personal Notes", "description": "Diary-style notes"},
+  {"id": "todo_list", "name": "Todo List", "description": "Task list with URLs"}
+]
+```
+
+### Get Text Template Content
+```http
+GET /api/profiles/text-templates/{template_id}
+```
+
+### List Token Types
+```http
+GET /api/profiles/token-types/list
+```
+
+Response:
+```json
+[
+  {"id": "dns", "name": "DNS Token", "extension": null},
+  {"id": "word", "name": "Word Document", "extension": ".docx"},
+  {"id": "excel", "name": "Excel Spreadsheet", "extension": ".xlsx"},
+  {"id": "pdf", "name": "PDF Document", "extension": ".pdf"},
+  {"id": "url", "name": "HTTP URL", "extension": ".txt"},
+  {"id": "qr", "name": "QR Code", "extension": ".png"}
+]
+```
 
 ---
 
-### Drives
+## Profile Files
 
-#### List Drives
+Manage uploaded files for a profile.
+
+### List Profile Files
 ```http
-GET /drives?campaign_id={uuid}&status={status}
+GET /api/profiles/{profile_id}/files
 ```
 
-#### Create Drive
+### Upload File
 ```http
-POST /drives
+POST /api/profiles/{profile_id}/files
+Content-Type: multipart/form-data
+
+file: <binary>
+folder: "Documents"
+file_type: "static"
+```
+
+File types: `static`, `document`, `template`
+
+### Get File Details
+```http
+GET /api/profiles/{profile_id}/files/{file_id}
+```
+
+### Update File Metadata
+```http
+PUT /api/profiles/{profile_id}/files/{file_id}
+
+{
+  "folder": "Photos",
+  "display_name": "vacation.jpg"
+}
+```
+
+### Download File
+```http
+GET /api/profiles/{profile_id}/files/{file_id}/download
+```
+
+### Delete File
+```http
+DELETE /api/profiles/{profile_id}/files/{file_id}
+```
+
+### Reorder Files
+```http
+POST /api/profiles/{profile_id}/files/reorder
+
+{
+  "file_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+### Create URL Shortcut
+```http
+POST /api/profiles/{profile_id}/shortcuts
+
+{
+  "filename": "Important Link.url",
+  "target_url": "{canary_token-URL}",
+  "folder": "Documents",
+  "shortcut_type": "url"
+}
+```
+
+Shortcut types: `url` (Windows), `webloc` (macOS)
+
+### Create Template File
+```http
+POST /api/profiles/{profile_id}/templates
+
+{
+  "filename": "passwords.txt",
+  "template_id": "password_list",
+  "folder": "Private",
+  "custom_content": null
+}
+```
+
+### Preview Template File
+```http
+POST /api/profiles/{profile_id}/templates/{file_id}/preview
+
+{
+  "token_urls": {
+    "{canary_token-URL}": "https://example.com/token123"
+  }
+}
+```
+
+---
+
+## Drives
+
+### List Drives
+```http
+GET /api/drives?campaign_id={uuid}&status={status}
+```
+
+Status values: `created`, `prepared`, `deployed`, `triggered`, `recovered`
+
+### Create Drive
+```http
+POST /api/drives
 
 {
   "campaign_id": "uuid",
@@ -229,22 +664,48 @@ POST /drives
 }
 ```
 
-The `url_config` field is optional. If omitted, the drive inherits URL settings from its profile. If provided, it overrides the profile's URL configuration for this drive only.
+The `url_config` field is optional. If omitted, the drive inherits URL settings from its profile.
 
 Response:
 ```json
 {
   "id": "uuid",
-  "unique_code": "USB-A1B2-ACME",
+  "unique_code": "USB-A1B2C3",
   "status": "created",
   "label": "HR Payroll Q4"
 }
 ```
 
-#### Prepare Drive
+### Get Drive by Code
+```http
+GET /api/drives/by-code/{code}
+```
+
+### Get Drive Details
+```http
+GET /api/drives/{id}
+```
+
+### Update Drive
+```http
+PUT /api/drives/{id}
+
+{
+  "label": "Updated Label",
+  "notes": "Additional notes"
+}
+```
+
+### Delete Drive
+Deletes drive and all associated tokens from database and CanaryTokens server.
+```http
+DELETE /api/drives/{id}
+```
+
+### Prepare Drive
 Creates tokens and generates files.
 ```http
-POST /drives/{id}/prepare
+POST /api/drives/{id}/prepare
 ```
 
 Response:
@@ -255,34 +716,25 @@ Response:
   "tokens": [
     {"id": "uuid", "token_type": "dns", "filename": null},
     {"id": "uuid", "token_type": "word", "filename": "Payroll_Summary.docx"}
-  ]
+  ],
+  "files_manifest": {
+    "file_count": 12,
+    "total_size_bytes": 1048576
+  }
 }
 ```
 
-#### Download Drive ZIP
+### Download Drive ZIP
 ```http
-GET /drives/{id}/download
+GET /api/drives/{id}/download
 ```
 
-Returns a ZIP file containing all drive files including:
-- Token-embedded documents (Word, Excel, PDF)
-- Text files with tracking URLs
-- QR code images
-- AI-generated template images (Photos folder)
-- Folder tokens (desktop.ini files)
+Returns a ZIP file containing all drive files.
 
-**URL Shortening**: When URL shortening is enabled (via profile or drive `url_config`), each `{canary_url}` placeholder in text files receives a unique short URL. For example, a text file with 6 URL placeholders will have 6 different short URLs like:
-```
-Subscribe: https://links.example.com/hr-docs-mmoe
-Exclusive Content: https://links.example.com/hr-docs-2xh9
-Management: https://links.example.com/hr-docs-3nqk
-```
-All URLs redirect to the same canary token but appear unique for believability.
-
-#### Deploy Drive
+### Deploy Drive
 Record deployment location.
 ```http
-POST /drives/{id}/deploy
+POST /api/drives/{id}/deploy
 
 {
   "latitude": 37.7749,
@@ -292,19 +744,25 @@ POST /drives/{id}/deploy
 }
 ```
 
-#### Get Drive by Code
+### Deploy with Photo
+Record deployment with photo (extracts GPS from EXIF).
 ```http
-GET /drives/by-code/{code}
+POST /api/drives/{id}/deploy-with-photo
+Content-Type: multipart/form-data
+
+photo: <binary>
+location_description: "Near reception"
+deployed_by: "John Smith"
 ```
 
-#### Get Drive Tokens
+### Get Drive Tokens
 ```http
-GET /drives/{id}/tokens
+GET /api/drives/{id}/tokens
 ```
 
-#### Get Drive Deployment
+### Get Drive Deployment
 ```http
-GET /drives/{id}/deployment
+GET /api/drives/{id}/deployment
 ```
 
 Response:
@@ -324,40 +782,46 @@ Response:
   "photo_url": "/uploads/deployments/photo.jpg",
   "deployed_by": "John Smith",
   "deployment_notes": "Left near reception desk",
-  "deployed_at": "2024-01-15T10:00:00Z",
-  "photo_taken_at": "2024-01-15T09:55:00Z"
+  "deployed_at": "2024-01-15T10:00:00Z"
 }
 ```
 
-#### Update Drive Deployment
-Update deployment details for a deployed or triggered drive.
+### Update Drive Deployment
 ```http
-PUT /drives/{id}/deployment
+PUT /api/drives/{id}/deployment
 
 {
-  "latitude": 37.7749,
-  "longitude": -122.4194,
-  "location_name": "Building A - Updated",
-  "location_description": "Near elevator bank",
-  "location_type": "office_building",
-  "address": "123 Main St",
-  "city": "San Francisco",
-  "state": "CA",
-  "country": "US",
-  "deployed_by": "John Smith",
-  "deployment_notes": "Updated location after finding actual drop spot"
+  "location_description": "Updated location",
+  "deployment_notes": "Added more details"
 }
 ```
-
-Note: This endpoint allows editing deployment details even after a drive has been triggered, useful for correcting location information or adding notes based on trigger data.
 
 ---
 
-### Alerts
+## Tokens
 
-#### List Recent Alerts
+### Get Token Details
 ```http
-GET /alerts/recent?hours=24
+GET /api/tokens/{token_id}
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "drive_id": "uuid",
+  "token_type": "word",
+  "filename": "Payroll_Summary.docx",
+  "canary_token_id": "abc123",
+  "token_url": "https://tokens.example.com/abc123",
+  "created_at": "2024-01-15T10:00:00Z",
+  "trigger_count": 5
+}
+```
+
+### Get Token Triggers
+```http
+GET /api/tokens/{token_id}/triggers
 ```
 
 Response:
@@ -365,7 +829,189 @@ Response:
 [
   {
     "id": "uuid",
-    "drive_code": "USB-A1B2-ACME",
+    "source_ip": "192.168.1.100",
+    "user_agent": "Mozilla/5.0...",
+    "geo_city": "San Francisco",
+    "geo_country": "US",
+    "triggered_at": "2024-01-15T14:30:00Z"
+  }
+]
+```
+
+### Delete Token
+Deletes token from database and CanaryTokens server.
+```http
+DELETE /api/tokens/{token_id}
+```
+
+---
+
+## Short URLs
+
+Manage shortened URLs for tokens.
+
+### Create Short URL
+```http
+POST /api/shortener/drives/{drive_id}/tokens/{token_id}
+
+{
+  "custom_slug": "hr-docs-2024"
+}
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "short_url": "https://links.example.com/hr-docs-2024",
+  "target_url": "https://tokens.example.com/abc123",
+  "slug": "hr-docs-2024",
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### List Drive Short URLs
+```http
+GET /api/shortener/drives/{drive_id}
+```
+
+### Get Short URL Details
+```http
+GET /api/shortener/{short_url_id}
+```
+
+### Get Short URL Stats
+```http
+GET /api/shortener/{short_url_id}/stats
+```
+
+Response:
+```json
+{
+  "id": "uuid",
+  "short_url": "https://links.example.com/hr-docs-2024",
+  "visit_count": 42,
+  "visits_by_day": {
+    "2024-01-15": 10,
+    "2024-01-16": 32
+  }
+}
+```
+
+### Delete Short URL
+```http
+DELETE /api/shortener/{short_url_id}
+```
+
+### Bulk Create Short URLs
+```http
+POST /api/shortener/bulk/drives/{drive_id}
+
+{
+  "token_ids": ["uuid1", "uuid2", "uuid3"],
+  "base_slug": "hr-docs",
+  "suffix_mode": "random"
+}
+```
+
+---
+
+## Targets (Organizations)
+
+Manage target organization profiles for campaigns.
+
+### Get Field Options
+```http
+GET /api/targets/options
+```
+
+Response:
+```json
+{
+  "industries": ["technology", "finance", "healthcare", "manufacturing", "retail", "other"],
+  "company_sizes": ["startup", "smb", "mid_market", "enterprise", "global"],
+  "departments": ["it", "hr", "finance", "executive", "engineering", "sales", "marketing"],
+  "regions": ["us_east", "us_west", "europe", "asia_pacific", "latam"]
+}
+```
+
+### List Targets
+```http
+GET /api/targets?industry={industry}
+```
+
+### Create Target
+```http
+POST /api/targets
+
+{
+  "name": "Acme Corp Assessment",
+  "company_name": "Acme Corporation",
+  "industry": "technology",
+  "company_size": "enterprise",
+  "target_department": "engineering",
+  "geographic_region": "us_west",
+  "known_technologies": ["AWS", "Kubernetes", "Python"],
+  "email_domain": "acme.com",
+  "website": "https://acme.com",
+  "osint_notes": "Uses Slack for internal comms"
+}
+```
+
+### Get Target
+```http
+GET /api/targets/{target_id}
+```
+
+### Update Target
+```http
+PUT /api/targets/{target_id}
+
+{
+  "osint_notes": "Updated reconnaissance notes"
+}
+```
+
+### Delete Target
+```http
+DELETE /api/targets/{target_id}
+```
+
+### Get Scenario Recommendation
+Uses AI to recommend the best profile scenario for the target.
+```http
+POST /api/targets/{target_id}/recommend-scenario
+```
+
+Response:
+```json
+{
+  "recommended_profile": "it_department",
+  "confidence": "high",
+  "reasoning": "Target is a tech company with engineering focus...",
+  "alternative_profiles": ["developer", "network_admin"],
+  "suggested_labels": ["IT Tools Q4", "DevOps Resources"],
+  "suggested_filenames": ["kubernetes_config.docx", "aws_credentials.xlsx"],
+  "risk_factors": ["Tech-savvy employees may be suspicious"],
+  "tips": ["Use technical jargon in filenames"]
+}
+```
+
+---
+
+## Alerts
+
+### List Recent Alerts
+```http
+GET /api/alerts/recent?hours=24
+```
+
+Response:
+```json
+[
+  {
+    "id": "uuid",
+    "drive_code": "USB-A1B2C3",
     "token_type": "word",
     "token_filename": "Payroll_Summary.docx",
     "source_ip": "192.168.1.100",
@@ -376,9 +1022,9 @@ Response:
 ]
 ```
 
-#### Get Alert Statistics
+### Get Alert Statistics
 ```http
-GET /alerts/stats?campaign_id={uuid}
+GET /api/alerts/stats?campaign_id={uuid}
 ```
 
 Response:
@@ -391,13 +1037,10 @@ Response:
 }
 ```
 
-#### Get Map Data
+### Get Map Data
 ```http
-GET /alerts/map?campaign_id={uuid}
-GET /alerts/mapdata?campaign_id={uuid}  # Alias endpoint
+GET /api/alerts/map?campaign_id={uuid}
 ```
-
-Returns an array of map points for visualization. Each point has a `type` field indicating whether it's a deployment or trigger event.
 
 Response:
 ```json
@@ -426,29 +1069,19 @@ Response:
     "details": {
       "token_type": "word",
       "filename": "Payroll_Summary.docx",
-      "source_ip": "192.168.1.100",
-      "geo_city": "San Francisco",
-      "geo_country": "US"
+      "source_ip": "192.168.1.100"
     }
   }
 ]
 ```
 
-Map Point Fields:
-- `type`: Either `"deployment"` or `"trigger"`
-- `latitude`/`longitude`: Geographic coordinates
-- `label`: Display label for map markers
-- `drive_code`: Associated drive identifier
-- `timestamp`: When the event occurred
-- `details`: Additional context (varies by type)
-
 ---
 
-### Content Generation
+## Content Generation
 
-#### Generate Document
+### Generate Document
 ```http
-POST /generate/document
+POST /api/generate/document
 
 {
   "document_type": "memo",
@@ -461,14 +1094,14 @@ POST /generate/document
 Response:
 ```json
 {
-  "content": "MEMORANDUM\n\nTo: All Employees\nFrom: HR Department...",
+  "content": "MEMORANDUM\n\nTo: All Employees...",
   "filename": "memo_payroll_adjustments.docx"
 }
 ```
 
-#### Generate Image
+### Generate Image
 ```http
-POST /generate/image
+POST /api/generate/image
 
 {
   "prompt": "Professional corporate office building",
@@ -479,16 +1112,21 @@ POST /generate/image
 
 ---
 
-### Reports
+## Reports
 
-#### Get Campaign Report
+### Get Campaign Report
 ```http
-GET /reports/campaign/{id}
+GET /api/reports/campaign/{id}
 ```
 
 Response:
 ```json
 {
+  "campaign": {
+    "id": "uuid",
+    "name": "Q1 Assessment",
+    "client_name": "Acme Corp"
+  },
   "total_drives": 10,
   "deployed": 8,
   "triggered": 3,
@@ -519,21 +1157,21 @@ Response:
 }
 ```
 
-#### Export Campaign CSV
+### Export Campaign CSV
 ```http
-GET /reports/export/{id}/csv
+GET /api/reports/export/{id}/csv
 ```
 
 Returns a CSV file with all campaign data.
 
 ---
 
-### Webhooks
+## Webhooks
 
-#### CanaryTokens Webhook
+### CanaryTokens Webhook
 Receives trigger notifications from CanaryTokens.
 ```http
-POST /webhooks/canary
+POST /api/webhooks/canary
 
 {
   "token": "canary-token-id",
@@ -545,12 +1183,11 @@ POST /webhooks/canary
 
 ---
 
-### Settings (Admin Only)
+## Settings (Admin Only)
 
-#### Get Shlink Status
-Check connection status of the Shlink URL shortener.
+### Get Shlink Status
 ```http
-GET /settings/shlink/status
+GET /api/settings/shlink/status
 ```
 
 Response:
@@ -564,62 +1201,34 @@ Response:
 }
 ```
 
-#### Get Shlink Configuration
+### Get Shlink Configuration
 ```http
-GET /settings/shlink/config
+GET /api/settings/shlink/config
 ```
 
-Response:
-```json
-{
-  "domain": "links.subproject55.com",
-  "api_url": "http://shlink:8080",
-  "configured": true
-}
-```
-
-#### Test Shlink Connection
-Creates and immediately deletes a test short URL to verify connectivity.
+### Test Shlink Connection
 ```http
-POST /settings/shlink/test
+POST /api/settings/shlink/test
 ```
 
 Response:
 ```json
 {
   "success": true,
-  "test_url": "https://example.com/shlink-connection-test",
-  "short_url": "https://links.subproject55.com/abc123",
+  "test_url": "https://example.com/test",
+  "short_url": "https://links.example.com/abc123",
   "error": null
 }
 ```
 
-#### Get All Profile URL Configurations
+### Get All Profile URL Configurations
 ```http
-GET /settings/url-configs
+GET /api/settings/url-configs
 ```
 
-Response:
-```json
-[
-  {
-    "id": "uuid",
-    "name": "HR Documents",
-    "scenario_type": "hr_documents",
-    "enabled": true,
-    "url_config": {
-      "enabled": true,
-      "base_slug": "hr-docs",
-      "suffix_mode": "random",
-      "suffix_length": 4
-    }
-  }
-]
-```
-
-#### Update Profile URL Configuration
+### Update Profile URL Configuration
 ```http
-PUT /settings/url-configs/{profile_id}
+PUT /api/settings/url-configs/{profile_id}
 
 {
   "enabled": true,
@@ -630,32 +1239,21 @@ PUT /settings/url-configs/{profile_id}
 ```
 
 Suffix modes:
-- `random` - Random alphanumeric suffix (e.g., `hr-docs-a7k2`)
-- `drive_code` - Uses drive code (e.g., `hr-docs-usba1b2`)
+- `random` - Random alphanumeric suffix
+- `drive_code` - Uses drive code
 - `sequential` - Sequential numbering
-- `custom` - Custom suffix provided at creation
 
-#### Bulk Update URL Configurations
+### Bulk Update URL Configurations
 ```http
-PUT /settings/url-configs/bulk
+PUT /api/settings/url-configs/bulk
 
 [
   {
-    "id": "uuid",
+    "id": "profile-uuid",
     "enabled": true,
-    "base_slug": "hr-docs",
-    "suffix_mode": "random",
-    "suffix_length": 4
+    "base_slug": "hr-docs"
   }
 ]
-```
-
-Response:
-```json
-{
-  "updated": ["uuid1", "uuid2"],
-  "count": 2
-}
 ```
 
 ---
@@ -669,6 +1267,19 @@ All errors follow this format:
 }
 ```
 
+Validation errors include field details:
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "email"],
+      "msg": "Invalid email format",
+      "type": "value_error"
+    }
+  ]
+}
+```
+
 Common HTTP status codes:
 - `400` - Bad Request (invalid input)
 - `401` - Unauthorized (missing/invalid auth)
@@ -676,6 +1287,8 @@ Common HTTP status codes:
 - `404` - Not Found
 - `422` - Validation Error
 - `500` - Internal Server Error
+
+---
 
 ## Rate Limiting
 
