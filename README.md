@@ -19,6 +19,16 @@ This system streamlines USB drop security assessments by providing:
 - **Geographic Tracking** - Interactive map visualization of deployment locations (blue) and trigger events (red) with detailed popups
 - **CLI Tool** - Command-line interface for field operators preparing and deploying drives
 
+## Screenshots
+
+| Dashboard | Map View |
+|-----------|----------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Map](docs/screenshots/map.png) |
+
+| Profile Wizard | Alerts |
+|----------------|--------|
+| ![Wizard](docs/screenshots/wizard.png) | ![Alerts](docs/screenshots/alerts.png) |
+
 ## Architecture
 
 ```
@@ -87,8 +97,8 @@ All services run in Docker containers on a single VPS with Caddy providing autom
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/CarbonRaven/USB-drop.git
-cd USB-drop
+git clone https://github.com/CarbonRaven/USB-Drop--CanaryTokens.git
+cd USB-Drop--CanaryTokens
 
 # Copy and edit environment configuration
 cp .env.example .env
@@ -163,6 +173,7 @@ USB-drop/
 ├── landing-pages/         # Redirect pages
 │   └── rickroll/
 ├── docs/                  # Documentation
+│   ├── screenshots/       # UI screenshots
 │   ├── DEPLOYMENT.md
 │   ├── API.md
 │   └── CLI.md
@@ -196,6 +207,36 @@ Each profile automatically includes:
 - QR codes for mobile engagement
 - Folder tokens (desktop.ini) for Windows
 - AI-generated photos in a Photos folder
+
+## Believability Features
+
+Generated USB drives include multiple layers of authenticity to avoid detection as test devices:
+
+### Metadata Injection
+| File Type | Injected Metadata |
+|-----------|-------------------|
+| **Office Documents** | Author, Company, LastModifiedBy, TotalTime (realistic editing duration) |
+| **PDF Files** | Author, Producer, Creator (matching application pairs like Word→PDF) |
+| **Images** | EXIF data: Camera Make/Model, GPS coordinates, capture settings |
+
+### Timestamp Randomization
+File created/modified timestamps are randomized based on scenario type:
+- **Corporate** profiles: Business hours (9-5), weekdays only
+- **Personal** profiles: Evenings/weekends, varied patterns
+- **Technical** profiles: Late night "developer hours"
+
+### Automatic Junk Files
+Drives include realistic system artifacts:
+- `.DS_Store`, `.Spotlight-V100` (macOS)
+- `Thumbs.db` (Windows thumbnail cache)
+- `notes.txt`, `_README.txt` (common user files)
+- Empty folders like `Documents/Archive/`, `Templates/`
+
+### URL Shortening
+When enabled, tracking URLs are automatically shortened via Shlink:
+- Each `{canary_token-URL}` placeholder gets a unique short URL
+- URLs appear legitimate (e.g., `links.company.com/docs-a7k2`)
+- All short URLs redirect to the same canary token
 
 ## Workflow Example
 
