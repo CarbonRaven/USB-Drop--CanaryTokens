@@ -19,16 +19,6 @@ This system streamlines USB drop security assessments by providing:
 - **Geographic Tracking** - Interactive map visualization of deployment locations (blue) and trigger events (red) with detailed popups
 - **CLI Tool** - Command-line interface for field operators preparing and deploying drives
 
-## Screenshots
-
-| Dashboard | Map View |
-|-----------|----------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Map](docs/screenshots/map.png) |
-
-| Profile Wizard | Alerts |
-|----------------|--------|
-| ![Wizard](docs/screenshots/wizard.png) | ![Alerts](docs/screenshots/alerts.png) |
-
 ## Architecture
 
 ```
@@ -173,7 +163,6 @@ USB-drop/
 ├── landing-pages/         # Redirect pages
 │   └── rickroll/
 ├── docs/                  # Documentation
-│   ├── screenshots/       # UI screenshots
 │   ├── DEPLOYMENT.md
 │   ├── API.md
 │   └── CLI.md
