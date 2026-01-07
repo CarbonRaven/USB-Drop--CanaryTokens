@@ -1,5 +1,20 @@
 # Profile Creation Wizard Research
 
+## Implementation Status
+
+> **Note:** This document contains research conducted during the design phase of the Profile Wizard. The wizard has been implemented based on these findings. See [PROFILE_WIZARD_DESIGN.md](PROFILE_WIZARD_DESIGN.md) for the actual implementation details.
+
+**Decisions Made:**
+- ✅ **5-step wizard** implemented (Scenario → Folders → Files/Tokens → Content → Review)
+- ✅ **Shlink selected** for URL shortening (self-hosted, full control)
+- ✅ **Slow redirect tokens** used as default for maximum intelligence gathering
+- ✅ **Visual file tree** implemented for folder structure preview
+- ✅ **URL path customization** available via profile file configuration
+- ⏸️ **Power user mode** deferred (single-page with shortcuts)
+- ⏸️ **WYSIWYG visual builder** deferred (drag-drop file explorer interface)
+
+---
+
 ## Current State Analysis
 
 The existing profile creation has:
@@ -218,9 +233,9 @@ https://company.com/you-got-caught
 
 #### 4. Custom Landing Pages
 ```
-https://app.subproject55.com/landing/session-expired
-https://app.subproject55.com/landing/file-not-found
-https://app.subproject55.com/landing/access-denied
+https://app.yourdomain.com/landing/session-expired
+https://app.yourdomain.com/landing/file-not-found
+https://app.yourdomain.com/landing/access-denied
 ```
 
 ### Browser Fingerprint Data (Slow Redirect)
@@ -356,9 +371,9 @@ According to security research, "canary tokens hidden behind shortened URLs work
 
 **Best for CanaryTokens Integration: Short.io**
 - 1,000 free branded links/month
-- Free custom domain support
-- Full REST API
-- Custom slugs (e.g., `yourdomain.com/salary-report`)
+- Custom domain included
+- REST API for automation
+- No infrastructure to manage
 
 ### Self-Hosted URL Shorteners (Full Control)
 
@@ -370,7 +385,7 @@ According to security research, "canary tokens hidden behind shortened URLs work
 | [**Polr**](https://polrproject.org/) | PHP/Lumen | MySQL | ✅ | ✅ REST | GPL |
 | [**Dub**](https://github.com/dubinc/dub) | TypeScript | PostgreSQL | ✅ | ✅ REST | AGPL |
 
-**Best for Self-Hosting: Shlink**
+**Selected for Implementation: Shlink**
 - Full Docker support
 - REST API with CORS
 - Custom slugs per domain
@@ -395,15 +410,15 @@ curl -X POST "https://api.short.io/links" \
 
 #### Shlink API (Self-Hosted)
 ```bash
-curl -X POST "https://shlink.yourserver.com/rest/v3/short-urls" \
+curl -X POST "https://links.yourdomain.com/rest/v3/short-urls" \
   -H "X-Api-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "longUrl": "http://canarytokens.com/tags/xxx/file.xlsx",
     "customSlug": "salary-info",
-    "domain": "files.company.com"
+    "domain": "links.yourdomain.com"
   }'
-# Result: https://files.company.com/salary-info
+# Result: https://links.yourdomain.com/salary-info
 ```
 
 #### YOURLS API
@@ -472,14 +487,14 @@ https://finance.company.link/budget
 - REST API for automation
 - No infrastructure to manage
 
-#### Option B: Self-Hosted (Full Control)
+#### Option B: Self-Hosted (Full Control) ✅ Selected
 **Shlink** via Docker - add to existing stack:
 ```yaml
 # Add to docker-compose.yml
 shlink:
   image: shlinkio/shlink:stable
   environment:
-    DEFAULT_DOMAIN: links.subproject55.com
+    DEFAULT_DOMAIN: links.yourdomain.com
     IS_HTTPS_ENABLED: "true"
     DB_DRIVER: postgres
     DB_HOST: postgres
