@@ -11,12 +11,28 @@ This is a **USB drop penetration testing campaign management system** using Cana
 ## Architecture
 
 ```
-├── campaign-api/          # FastAPI backend (Python 3.9+)
+├── campaign-api/          # FastAPI backend (Python 3.11+)
+│   └── app/
+│       ├── models/        # SQLAlchemy ORM models
+│       ├── routers/       # API endpoints
+│       └── services/      # Business logic
 ├── campaign-frontend/     # Vue 3 + Vite + Tailwind frontend
-├── usb-drop-cli/         # Click-based CLI tool
-├── landing-pages/        # Flask landing pages (rickroll)
-├── docker-compose.yml    # Main deployment (Caddy, API, Frontend, Postgres)
-└── docker-compose.canarytokens.yml  # CanaryTokens stack
+│   └── src/
+│       ├── views/         # Page components
+│       ├── stores/        # Pinia state management
+│       └── components/    # Reusable components
+├── usb-drop-cli/          # Click-based CLI tool
+├── landing-pages/         # Flask landing pages (rickroll)
+├── docs/                  # Documentation
+│   └── images/            # Screenshots
+├── caddy/                 # Caddy config data
+├── scripts/               # Utility scripts
+├── docker-compose.yml     # Main deployment (Caddy, API, Frontend, Postgres)
+├── docker-compose.canarytokens.yml  # CanaryTokens stack
+├── Caddyfile              # Caddy reverse proxy configuration
+├── .env.example           # Environment template
+├── LICENSE                # MIT License
+└── README.md              # Project documentation
 ```
 
 ### Campaign API (FastAPI)
