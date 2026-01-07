@@ -50,7 +50,7 @@ This system streamlines USB drop security assessments by providing:
 ![Drives](docs/images/drives.png)
 
 ### Deployment Map
-![Map View](docs/images/map.png)
+![Map View](docs/images/map.jpg)
 
 ### Profile Templates
 ![Profiles](docs/images/profiles.png)
