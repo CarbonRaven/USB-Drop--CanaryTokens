@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if not preview_mode %}
+    <meta http-equiv="refresh" content="{{ redirect_delay }};url={{ redirect_url }}">
+    {% endif %}
+    <title>{% block title %}Loading...{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        {% block extra_styles %}{% endblock %}
+        {% if preview_mode %}
+        .preview-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 500;
+            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .preview-banner a {
+            color: white;
+            margin-left: 15px;
+            text-decoration: underline;
+        }
+        body {
+            padding-top: 50px;
+        }
+        {% endif %}
+    </style>
+</head>
+<body>
+    {% if preview_mode %}
+    <div class="preview-banner">
+        Preview Mode - This is how the landing page will appear to targets
+        <a href="/preview">View All Themes</a>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+    {% if not preview_mode %}
+    <script>
+        // Log page view
+        fetch('/api/log', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                page: '{{ request.path }}',
+                screen: {width: screen.width, height: screen.height},
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            })
+        }).catch(() => {});
+
+        // Redirect after delay
+        setTimeout(function() {
+            window.location.href = '{{ redirect_url }}';
+        }, {{ redirect_delay * 1000 }});
+    </script>
+    {% endif %}
+</body>
+</html>

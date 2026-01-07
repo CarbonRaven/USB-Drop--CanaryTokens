@@ -1,0 +1,109 @@
+# CanaryTokens Docker Stack
+# This extends the main docker-compose.yml
+# Run with: docker compose -f docker-compose.yml -f docker-compose.canarytokens.yml up -d
+
+services:
+  # =============================================================================
+  # CanaryTokens Frontend
+  # =============================================================================
+  canarytokens-frontend:
+    image: thinkst/canarytokens
+    restart: unless-stopped
+    command: bash -c 'cd frontend; poetry run python -m uvicorn app:app --host 0.0.0.0 --port 8082'
+    environment:
+      - CANARY_PUBLIC_DOMAIN=${CANARY_DOMAIN}
+      - CANARY_PUBLIC_IP=${VPS_IP}
+      - CANARY_DOMAINS=${CANARY_DOMAIN}
+      - CANARY_NXDOMAINS=nx.${CANARY_DOMAIN}
+      - CANARY_WG_PRIVATE_KEY_SEED=${WG_PRIVATE_KEY_SEED}
+      - CANARY_GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - CANARY_REDIS_HOST=redis
+      - CANARY_REDIS_PORT=6379
+      - CANARY_FACTORY_AUTH=${FACTORY_AUTH}
+      - LOG_FILE=/logs/frontend.log
+    volumes:
+      - canarytokens_logs:/logs
+    networks:
+      - canarytokens
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # =============================================================================
+  # CanaryTokens Switchboard (Alert Processing)
+  # =============================================================================
+  canarytokens-switchboard:
+    image: thinkst/canarytokens
+    restart: unless-stopped
+    command: bash -c 'cd switchboard; rm -f switchboard.pid; poetry run twistd -noy switchboard.tac --pidfile=switchboard.pid'
+    ports:
+      - "53:5354/tcp"
+      - "53:5354/udp"
+      - "25:2500/tcp"
+      - "6443:6443/tcp"    # Kubernetes API
+      - "51820:51820/udp"  # WireGuard
+    environment:
+      # Domain Configuration
+      - CANARY_PUBLIC_DOMAIN=${CANARY_DOMAIN}
+      - CANARY_PUBLIC_IP=${VPS_IP}
+      - CANARY_DOMAINS=${CANARY_DOMAIN}
+      - CANARY_NXDOMAINS=nx.${CANARY_DOMAIN}
+      - CANARY_WG_PRIVATE_KEY_SEED=${WG_PRIVATE_KEY_SEED}
+
+      # Trust X-Forwarded-For header from reverse proxy (Caddy sends this automatically)
+      - CANARY_REAL_IP_HEADER=x-forwarded-for
+
+      # Redis Configuration
+      - CANARY_REDIS_HOST=redis
+      - CANARY_REDIS_PORT=6379
+
+      # Factory Auth (for API access)
+      - CANARY_FACTORY_AUTH=${FACTORY_AUTH}
+
+      # Webhook for Alerts (sends to our Campaign API)
+      - CANARY_WEBHOOK_URL=http://api:8000/api/webhooks/canary
+
+      # Email Configuration (Mailgun)
+      - CANARY_MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - CANARY_MAILGUN_DOMAIN_NAME=${MAILGUN_DOMAIN}
+      - CANARY_MAILGUN_BASE_URL=${MAILGUN_BASE_URL:-https://api.mailgun.net}
+      - CANARY_ALERT_EMAIL_FROM_ADDRESS=alerts@${CANARY_DOMAIN}
+      - CANARY_ALERT_EMAIL_FROM_DISPLAY=CanaryTokens Alert
+      - CANARY_ALERT_EMAIL_SUBJECT=CanaryToken Triggered
+
+      # Logging
+      - LOG_FILE=/logs/switchboard.log
+    volumes:
+      - canarytokens_logs:/logs
+    networks:
+      - canarytokens
+      - backend
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  canarytokens_logs:
+
+networks:
+  canarytokens:
+    external: true
+    name: usb-drop_canarytokens
+  backend:
+    external: true
+    name: usb-drop_backend

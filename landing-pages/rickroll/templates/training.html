@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Training - Loading Module{% endblock %}
+
+{% block extra_styles %}
+body {
+    background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+}
+.container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.header {
+    background: #f5f5f5;
+    margin: -40px -40px 30px -40px;
+    padding: 20px 40px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid #0d47a1;
+}
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.logo {
+    width: 50px;
+    height: 50px;
+    background: #0d47a1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.logo svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+.header-text h1 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 4px;
+}
+.header-text p {
+    font-size: 13px;
+    color: #666;
+}
+.spinner {
+    border-top-color: #0d47a1;
+}
+.module-info {
+    background: #e3f2fd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 24px;
+    text-align: left;
+}
+.module-title {
+    font-weight: 600;
+    color: #0d47a1;
+    margin-bottom: 8px;
+}
+.module-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #666;
+}
+.module-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.requirements {
+    margin-top: 20px;
+    padding: 12px;
+    background: #fff3e0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #e65100;
+}
+.requirements strong {
+    display: block;
+    margin-bottom: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+            </div>
+            <div class="header-text">
+                <h1>Learning Management System</h1>
+                <p>Corporate Compliance Training</p>
+            </div>
+        </div>
+    </div>
+    <p>Loading your assigned training module. Please do not close this window...</p>
+    <div class="spinner"></div>
+    <p style="font-size: 14px; color: #999;">Initializing interactive content...</p>
+    <div class="module-info">
+        <div class="module-title">Annual Security Awareness Training 2025</div>
+        <div class="module-meta">
+            <span>⏱ 45 minutes</span>
+            <span>📋 Quiz included</span>
+            <span>📜 Certificate</span>
+        </div>
+    </div>
+    <div class="requirements">
+        <strong>Deadline: January 31, 2025</strong>
+        This training is mandatory for all employees. Completion is tracked automatically.
+    </div>
+</div>
+{% endblock %}

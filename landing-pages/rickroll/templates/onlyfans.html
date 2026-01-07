@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Exclusive Content - Verifying Access{% endblock %}
+
+{% block extra_styles %}
+body {
+    background: linear-gradient(135deg, #00aff0 0%, #0088cc 100%);
+}
+.container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.logo {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #00aff0 0%, #0088cc 100%);
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,175,240,0.4);
+}
+.logo svg {
+    width: 40px;
+    height: 40px;
+    fill: white;
+}
+h1 {
+    background: linear-gradient(135deg, #00aff0, #0088cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.spinner {
+    border-top-color: #00aff0;
+}
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #fff3e0;
+    color: #e65100;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 20px;
+}
+.creator-info {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+.creator-info p {
+    font-size: 14px;
+    color: #666;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    </div>
+    <h1>Exclusive Content</h1>
+    <p>Verifying your subscription status and preparing your exclusive content...</p>
+    <div class="spinner"></div>
+    <p style="font-size: 14px; color: #999;">Authenticating subscriber...</p>
+    <div class="badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        Premium Content
+    </div>
+    <div class="creator-info">
+        <p>This content is age-restricted and requires verification.</p>
+    </div>
+</div>
+{% endblock %}

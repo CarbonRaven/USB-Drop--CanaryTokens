@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}HR Employee Portal - Accessing Payroll{% endblock %}
+
+{% block extra_styles %}
+body {
+    background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%);
+}
+.container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.logo-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+.logo {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.logo svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+.logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a472a;
+}
+h1 {
+    color: #1a472a;
+    font-size: 22px;
+}
+.spinner {
+    border-top-color: #1a472a;
+}
+.info-card {
+    background: #f0f7f2;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 24px;
+}
+.info-card h3 {
+    font-size: 14px;
+    color: #1a472a;
+    margin-bottom: 8px;
+}
+.info-card p {
+    font-size: 13px;
+    color: #555;
+}
+.security-notice {
+    margin-top: 20px;
+    padding: 12px;
+    background: #fff8e1;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #f57c00;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="logo-bar">
+        <div class="logo">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <span class="logo-text">Employee Portal</span>
+    </div>
+    <h1>Accessing Payroll Information</h1>
+    <p>Please wait while we securely retrieve your payroll documents...</p>
+    <div class="spinner"></div>
+    <p style="font-size: 14px; color: #999;">Decrypting sensitive data...</p>
+    <div class="info-card">
+        <h3>Document Request</h3>
+        <p>Payroll Summary • Tax Documents • Benefits Statement</p>
+    </div>
+    <div class="security-notice">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        This session is encrypted and monitored for security purposes
+    </div>
+</div>
+{% endblock %}

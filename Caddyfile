@@ -1,0 +1,157 @@
+# =============================================================================
+# USB Drop Campaign Management System - Caddy Configuration
+# Single domain: subproject55.com
+# =============================================================================
+
+# Global options
+{
+    email admin@subproject55.com
+    # Enable admin API on all interfaces for internal Docker network access
+    admin 0.0.0.0:2019
+    # Uncomment for staging certificates during testing
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# =============================================================================
+# Campaign Manager - App & API
+# =============================================================================
+
+# Frontend Application
+app.subproject55.com {
+    # Route API requests to backend
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+
+    # Route uploads to API (for deployment photos)
+    handle /uploads/* {
+        reverse_proxy api:8000
+    }
+
+    # Route everything else to frontend
+    handle {
+        reverse_proxy campaign-frontend:80
+
+        # Prevent caching of HTML files
+        @html {
+            path / /index.html
+            header Accept *text/html*
+        }
+        header @html Cache-Control "no-cache, no-store, must-revalidate"
+        header @html Pragma "no-cache"
+        header @html Expires "0"
+    }
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+# API Backend
+api.subproject55.com {
+    # CORS headers
+    header Access-Control-Allow-Origin "https://app.subproject55.com"
+    header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    header Access-Control-Allow-Headers "Content-Type, Authorization, X-API-Key"
+
+    # Handle preflight requests
+    @options method OPTIONS
+    respond @options 204
+
+    reverse_proxy api:8000
+}
+
+# =============================================================================
+# Landing Pages
+# =============================================================================
+
+# RickRoll Landing Page
+rick.subproject55.com {
+    reverse_proxy rickroll:8080
+}
+
+# =============================================================================
+# URL Shortener (Shlink)
+# =============================================================================
+
+# Short links domain - public facing
+links.subproject55.com {
+    reverse_proxy shlink:8080
+}
+
+# Shlink admin interface - protected
+shlink-admin.subproject55.com {
+    basic_auth {
+        {$TOKENS_BASIC_AUTH_USER} {$TOKENS_BASIC_AUTH_HASH}
+    }
+    reverse_proxy shlink-web:8080
+}
+
+# =============================================================================
+# CanaryTokens Server
+# =============================================================================
+
+# CanaryTokens web interface - PROTECTED with Basic Auth
+# Generate password hash with: docker exec caddy caddy hash-password
+tokens.subproject55.com {
+    basic_auth {
+        # Credentials from environment variables
+        {$TOKENS_BASIC_AUTH_USER} {$TOKENS_BASIC_AUTH_HASH}
+    }
+    reverse_proxy canarytokens-frontend:8082
+}
+
+# Root domain - handle CanaryTokens triggers, redirect rest to app
+subproject55.com {
+    # CanaryTokens trigger paths - route to switchboard HTTP channel (port 8083)
+    # Caddy automatically sends X-Forwarded-For header with real client IP
+    handle /stuff/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /articles/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /images/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /resources/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /static/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /traffic/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+    handle /tags/* {
+        reverse_proxy canarytokens-switchboard:8083
+    }
+
+    # Everything else redirects to app
+    handle {
+        redir https://app.subproject55.com{uri} permanent
+    }
+}
+
+# www redirect
+www.subproject55.com {
+    redir https://app.subproject55.com{uri} permanent
+}
+
+# =============================================================================
+# Wildcard for CanaryTokens callbacks
+# Uses Cloudflare DNS-01 challenge for wildcard certificate
+# Must be last - catches all other subdomains for token triggers
+# NOTE: Requires CLOUDFLARE_API_TOKEN to be set for DNS-01 challenge
+# =============================================================================
+
+# *.subproject55.com {
+#     tls {
+#         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+#     }
+#     reverse_proxy canarytokens-frontend:8082
+# }
