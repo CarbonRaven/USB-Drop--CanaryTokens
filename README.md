@@ -8,6 +8,22 @@ A comprehensive platform for managing USB drop penetration testing campaigns wit
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
+---
+
+> **⚠️ AUTHORIZATION REQUIRED**
+>
+> This tool is designed **exclusively for authorized security assessments**. USB drop testing is a social engineering technique that requires:
+>
+> - **Written authorization** from the asset owner
+> - **Defined scope** specifying physical locations and timeframes
+> - **Rules of Engagement (ROE)** document
+> - **Legal review** confirming compliance with local laws
+> - **Incident response plan** for unintended access
+>
+> **Before using this tool, ensure you have documented approval.** Unauthorized USB drop testing may violate computer fraud laws, trespassing laws, and organizational policies.
+
+---
+
 ## Overview
 
 This system streamlines USB drop security assessments by providing:
@@ -18,6 +34,19 @@ This system streamlines USB drop security assessments by providing:
 - **Real-time Alerts** - WebSocket-based notifications with Slack integration
 - **Geographic Tracking** - Interactive map visualization of deployment locations (blue) and trigger events (red) with detailed popups
 - **CLI Tool** - Command-line interface for field operators preparing and deploying drives
+
+## Screenshots
+
+<!-- TODO: Add screenshots of key UI features -->
+<!-- Suggested screenshots:
+- Dashboard with campaign overview
+- Drive preparation wizard
+- Map view with deployment/trigger markers
+- Alert feed
+- Profile selection
+-->
+
+*Screenshots coming soon*
 
 ## Architecture
 
@@ -75,16 +104,19 @@ All services run in Docker containers on a single VPS with Caddy providing autom
 | AI Generation | OpenAI API (GPT-4 + DALL-E 3) |
 | Maps | Leaflet.js + OpenStreetMap |
 | Real-time | WebSockets |
+| URL Shortening | Shlink (optional) |
 
 ## Quick Start
 
 ### Prerequisites
 
-- VPS with 8GB+ RAM (Debian 13 recommended)
+- VPS with 8GB+ RAM, 2+ CPU cores, 40GB+ disk (Debian 12/13 recommended)
 - Docker and Docker Compose v2+
 - **Two domains** pointed to your VPS:
   - **App domain** (e.g., `app.example.com`, `api.example.com`) - Campaign Manager
   - **Canary domain** (e.g., `tokens.example.com`) - CanaryTokens server
+- Ports 80 and 443 open for HTTPS traffic
+- (Optional) Cloudflare account for wildcard SSL certificates
 
 ### 1. Clone and Configure
 
@@ -99,41 +131,76 @@ nano .env
 
 ### 2. Configure Required Variables
 
+Generate secure secrets first:
+```bash
+# Run these commands and paste results into .env
+openssl rand -hex 32  # For DB_PASSWORD
+openssl rand -hex 32  # For JWT_SECRET_KEY
+openssl rand -hex 32  # For FACTORY_AUTH
+openssl rand -hex 32  # For REDIS_PASSWORD
+```
+
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VPS_IP` | Yes | Your server's public IP address |
 | `DB_PASSWORD` | Yes | PostgreSQL database password |
-| `JWT_SECRET_KEY` | Yes | Secret for JWT tokens (use `openssl rand -hex 32`) |
+| `JWT_SECRET_KEY` | Yes | Secret for JWT tokens |
+| `REDIS_PASSWORD` | Yes | Redis password |
 | `ADMIN_USERNAME` | Yes | Initial admin account username |
-| `ADMIN_PASSWORD` | Yes | Initial admin account password |
+| `ADMIN_PASSWORD` | Yes | Initial admin account password (12+ chars, mixed case, number, symbol) |
 | `CANARY_DOMAIN` | Yes | Domain for CanaryTokens (e.g., `tokens.example.com`) |
 | `FACTORY_AUTH` | Yes | CanaryTokens factory auth token |
-| `WEBHOOK_URL` | Yes | URL for CanaryTokens alerts callback |
+| `WEBHOOK_URL` | Yes | URL for CanaryTokens alerts callback (e.g., `https://api.example.com/api/webhooks/canary`) |
+| `CLOUDFLARE_API_TOKEN` | Conditional | Required for wildcard SSL (CanaryTokens subdomains) |
 | `OPENAI_API_KEY` | No | For AI content/image generation |
 | `SLACK_WEBHOOK_URL` | No | For Slack alert notifications |
+| `IPINFO_TOKEN` | No | For IP geolocation in alerts |
 | `SHLINK_API_KEY` | No | For URL shortening via Shlink |
 | `SHLINK_DOMAIN` | No | Short URL domain (e.g., `links.example.com`) |
-
-```bash
-# Generate secure secrets
-openssl rand -hex 32  # Use for DB_PASSWORD, JWT_SECRET_KEY, FACTORY_AUTH
-```
 
 ### 3. Deploy
 
 ```bash
-# Start CanaryTokens stack
+# Start CanaryTokens stack first
 docker compose -f docker-compose.canarytokens.yml up -d
+
+# Wait for CanaryTokens to be ready (check logs)
+docker compose -f docker-compose.canarytokens.yml logs -f
 
 # Start Campaign Manager
 docker compose up -d --build
 ```
 
-### 4. Access
+### 4. Verify Deployment
+
+```bash
+# Check all containers are running
+docker ps
+
+# Test API health
+curl -s https://api.yourdomain.com/health | jq
+
+# Test CanaryTokens connectivity (from API container)
+docker exec usb-drop-api-1 curl -s http://canarytokens-frontend:8082/generate
+
+# Check for errors in logs
+docker compose logs api --tail 50
+```
+
+### 5. Access
 
 - **Campaign Manager**: `https://app.yourdomain.com`
 - **API**: `https://api.yourdomain.com`
-- **CanaryTokens**: `https://tokens.your-canary-domain.com`
+- **CanaryTokens**: `https://tokens.yourdomain.com` (basic auth protected)
+
+Login with your `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
+
+### 6. Generate API Key (for CLI)
+
+1. Login to the Campaign Manager web UI
+2. Navigate to **Settings** → **API Keys**
+3. Click **Generate New Key**
+4. Copy and save the key securely (it won't be shown again)
 
 ## CLI Installation
 
@@ -143,7 +210,10 @@ pip install -e .
 
 # Configure
 usb-drop config set-api https://api.yourdomain.com
-usb-drop config set-key your-api-key
+usb-drop config set-key <your-api-key-from-step-6>
+
+# Verify connection
+usb-drop list-campaigns
 
 # Prepare a drive
 usb-drop prepare --interactive
@@ -152,7 +222,7 @@ usb-drop prepare --interactive
 ## Project Structure
 
 ```
-USB-drop/
+USB-Drop--CanaryTokens/
 ├── campaign-api/          # FastAPI backend
 │   ├── app/
 │   │   ├── models/        # SQLAlchemy models
@@ -170,19 +240,28 @@ USB-drop/
 ├── landing-pages/         # Redirect pages
 │   └── rickroll/
 ├── docs/                  # Documentation
-│   ├── DEPLOYMENT.md
-│   ├── API.md
-│   └── CLI.md
+│   ├── DEPLOYMENT.md      # Full VPS setup instructions
+│   ├── API.md             # Complete endpoint documentation
+│   ├── CLI.md             # Command-line tool usage
+│   ├── BELIEVABILITY_RESEARCH.md
+│   ├── PROFILE_WIZARD_DESIGN.md
+│   └── PROFILE_WIZARD_RESEARCH.md
 ├── docker-compose.yml
 ├── docker-compose.canarytokens.yml
-└── Caddyfile
+├── Caddyfile
+└── .env.example
 ```
 
 ## Documentation
 
-- [Deployment Guide](docs/DEPLOYMENT.md) - Full VPS setup instructions
-- [API Reference](docs/API.md) - Complete endpoint documentation
-- [CLI Guide](docs/CLI.md) - Command-line tool usage
+| Document | Description |
+|----------|-------------|
+| [Deployment Guide](docs/DEPLOYMENT.md) | Full VPS setup, SSL, networking |
+| [API Reference](docs/API.md) | Complete endpoint documentation |
+| [CLI Guide](docs/CLI.md) | Command-line tool usage |
+| [Believability Research](docs/BELIEVABILITY_RESEARCH.md) | Metadata injection techniques |
+| [Profile Wizard Design](docs/PROFILE_WIZARD_DESIGN.md) | UI component architecture |
+| [Profile Wizard Research](docs/PROFILE_WIZARD_RESEARCH.md) | UX research and decisions |
 
 ## Pre-Configured Profiles
 
@@ -265,10 +344,11 @@ Configure Shlink in Settings (admin only) or per-profile in the Profile Wizard.
 ## Security Considerations
 
 - All traffic encrypted via automatic HTTPS (Caddy + Let's Encrypt)
-- JWT authentication with short-lived tokens
+- JWT authentication with short-lived tokens (15 min access, 7 day refresh)
 - API keys for CLI/automation access
 - Database isolated in Docker network
 - Webhook signature validation
+- Password requirements: 12+ chars, uppercase, lowercase, digit, special char
 
 ### Role-Based Access Control
 
@@ -278,10 +358,118 @@ Configure Shlink in Settings (admin only) or per-profile in the Profile Wizard.
 | **Operator** | Manage campaigns, drives, profiles (no user management) |
 | **Viewer** | Read-only access to dashboards and reports |
 
+## Troubleshooting
+
+### CanaryTokens not responding
+
+```bash
+# Check CanaryTokens container status
+docker compose -f docker-compose.canarytokens.yml ps
+
+# View CanaryTokens logs
+docker compose -f docker-compose.canarytokens.yml logs frontend
+
+# Test internal connectivity from API
+docker exec usb-drop-api-1 curl -v http://canarytokens-frontend:8082/generate
+```
+
+### Token creation fails
+
+1. Verify `FACTORY_AUTH` matches in both `.env` files
+2. Check `WEBHOOK_URL` is accessible from the internet
+3. Ensure CanaryTokens frontend container is running
+4. Check API logs: `docker compose logs api --tail 100`
+
+### Webhooks not receiving alerts
+
+```bash
+# Test webhook endpoint directly
+curl -X POST https://api.yourdomain.com/api/webhooks/canary \
+  -H "Content-Type: application/json" \
+  -d '{"test": true}'
+
+# Check if Caddy is routing correctly
+docker logs caddy --tail 50
+```
+
+### Database connection issues
+
+```bash
+# Check Postgres is running
+docker compose ps postgres
+
+# Test connection
+docker exec usb-drop-postgres-1 pg_isready -U usbdrop
+
+# View Postgres logs
+docker compose logs postgres --tail 50
+```
+
+### Drive download returns empty/corrupted ZIP
+
+```bash
+# Check drive manifest in database
+docker exec usb-drop-postgres-1 psql -U usbdrop -d usbdrop \
+  -c "SELECT files_manifest FROM drives WHERE unique_code = 'USB-XXXXXX';"
+
+# Check API logs during download
+docker compose logs api --tail 100 | grep -i zip
+```
+
+### Frontend not loading
+
+```bash
+# Check frontend build status
+docker compose logs campaign-frontend --tail 50
+
+# Rebuild frontend
+docker compose up -d --build campaign-frontend
+
+# Clear browser cache and hard refresh
+```
+
+## Backup & Recovery
+
+### Database Backup
+
+```bash
+# Create backup
+docker exec usb-drop-postgres-1 pg_dump -U usbdrop usbdrop > backup_$(date +%Y%m%d).sql
+
+# Restore from backup
+cat backup_20250106.sql | docker exec -i usb-drop-postgres-1 psql -U usbdrop usbdrop
+```
+
+### Uploaded Files Backup
+
+```bash
+# Backup uploads directory
+docker cp usb-drop-api-1:/app/uploads ./uploads_backup_$(date +%Y%m%d)
+```
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please ensure your code follows the existing style and includes appropriate tests.
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
 
 ## Disclaimer
 
-This tool is designed for authorized security assessments only. Always obtain proper authorization before conducting USB drop tests. Misuse of this software may violate laws and regulations.
+This tool is designed for authorized security assessments only. The developers assume no liability for misuse. Always obtain proper written authorization before conducting USB drop tests. Unauthorized use may violate:
+
+- Computer Fraud and Abuse Act (CFAA) in the US
+- Computer Misuse Act in the UK
+- Similar laws in other jurisdictions
+- Organizational policies and employment agreements
+
+**You are solely responsible for ensuring your use of this tool is lawful and authorized.**
