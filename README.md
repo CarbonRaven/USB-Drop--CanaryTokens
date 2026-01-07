@@ -37,16 +37,17 @@ This system streamlines USB drop security assessments by providing:
 
 ## Screenshots
 
-<!-- TODO: Add screenshots of key UI features -->
-<!-- Suggested screenshots:
+### Login Page
+
+![Login Page](docs/images/login-page.gif)
+
+<!-- Additional screenshots to add:
 - Dashboard with campaign overview
 - Drive preparation wizard
 - Map view with deployment/trigger markers
 - Alert feed
 - Profile selection
 -->
-
-*Screenshots coming soon*
 
 ## Architecture
 
