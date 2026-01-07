@@ -4,6 +4,8 @@
 
 A multi-step wizard for creating, editing, and customizing USB drive profiles with integrated self-hosted URL shortening via Shlink.
 
+**Status:** Implemented and operational.
+
 ---
 
 ## Architecture
@@ -24,7 +26,7 @@ A multi-step wizard for creating, editing, and customizing USB drive profiles wi
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Campaign API (FastAPI)                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ /profiles/*  │  │ /shortener/* │  │ /tokens/*    │          │
+│  │ /profiles/*  │  │ /shortener/* │  │ /drives/*    │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -88,12 +90,6 @@ Select a base template/scenario that pre-populates folders, files, and token rec
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐ │
 │  │  💰               │  │  🎨               │  │  👩‍💻               │ │
 │  │  Finance          │  │  Social Creator   │  │  Developer        │ │
-│  │                   │  │                   │  │                   │ │
-│  │  10 files         │  │  15 files         │  │  8 files          │ │
-│  │  4 folders        │  │  5 folders        │  │  3 folders        │ │
-│  │  5 tokens         │  │  7 tokens         │  │  4 tokens         │ │
-│  │                   │  │                   │  │                   │ │
-│  │  [Preview]        │  │  [Preview]        │  │  [Preview]        │ │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘ │
 │                                                                    │
 │  ┌──────────────────────────────────────────────────────────────┐ │
@@ -107,39 +103,13 @@ Select a base template/scenario that pre-populates folders, files, and token rec
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### Preview Modal
-
-```
-┌─────────────────────────────────────────────────────┐
-│ HR Department Template                          [X] │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  📁 HR Documents                                    │
-│  ├── 📄 Employee_Salaries_2024.xlsx    [Excel]     │
-│  ├── 📄 Benefits_Overview.docx         [Word]      │
-│  └── 📄 desktop.ini                    [Folder]    │
-│  📁 Payroll                                         │
-│  ├── 📄 Pay_Stubs_Template.xlsx        [Excel]     │
-│  └── 📄 Tax_Forms_W2.pdf               [PDF]       │
-│  📁 Onboarding                                      │
-│  └── 📄 New_Hire_Checklist.docx        [Word]      │
-│                                                     │
-│  ─────────────────────────────────────────────────  │
-│  Tokens: 2 Excel, 2 Word, 1 PDF, 1 Folder          │
-│  Recommended for: Corporate environments            │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│                      [Use This Template]            │
-└─────────────────────────────────────────────────────┘
-```
-
 ### Data Output
 ```javascript
 {
-  scenario_type: "hr",
+  type: "hr",
+  template_id: "hr_department",
   name: "HR Documents - Q4 Campaign",
-  description: "Salary and benefits documents...",
-  template_id: "hr_department"
+  description: "Salary and benefits documents..."
 }
 ```
 
@@ -165,28 +135,23 @@ Customize the folder hierarchy that will appear on the USB drive.
 │  │ ├── 📁 HR Documents    ←    │  │                              ││
 │  │ │   └── 📁 Confidential     │  │ Name: [HR Documents      ]   ││
 │  │ ├── 📁 Payroll              │  │                              ││
-│  │ └── 📁 Benefits             │  │ Icon: [📁 Default     ▼]     ││
-│  │                             │  │                              ││
-│  │ ─────────────────────────── │  │ ☑ Make folder look enticing  ││
+│  │ └── 📁 Benefits             │  │ ☑ Make folder look enticing  ││
 │  │                             │  │   (adds desktop.ini token)   ││
+│  │ ─────────────────────────── │  │                              ││
+│  │                             │  │ [Delete Folder]              ││
 │  │ [+ Add Folder]              │  │                              ││
-│  │ [+ Add Subfolder]           │  │ [Delete Folder]              ││
 │  │                             │  │                              ││
 │  └─────────────────────────────┘  └──────────────────────────────┘│
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────────────┐ │
-│  │ 💡 Tip: Drag folders to reorder. Right-click for more options│ │
-│  └──────────────────────────────────────────────────────────────┘ │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### Interactions
+### Component: VisualFileTree.vue
 
-- **Drag & Drop**: Reorder folders, move into subfolders
-- **Right-click menu**: Rename, Delete, Add Subfolder, Duplicate
-- **Double-click**: Rename inline
-- **Checkbox**: Add folder token (desktop.ini) to specific folders
+Displays an interactive file tree with:
+- Folder hierarchy visualization
+- Add/remove folder actions
+- Folder token toggle
 
 ### Data Output
 ```javascript
@@ -216,75 +181,44 @@ Configure which files to create and what token types to embed in each.
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ Token Types                          Files in Profile       │  │
+│  │ Token Types (TokenPalette)     Files in Profile             │  │
 │  │                                                             │  │
-│  │ ┌─────────────────────┐              ┌───────────────────┐ │  │
-│  │ │ 📊 Excel Document   │              │ 📁 HR Documents   │ │  │
-│  │ │ Triggers when opened│  ──drag──▶   │ ├ Salaries.xlsx ● │ │  │
-│  │ │ in Microsoft Excel  │              │ ├ Benefits.docx ● │ │  │
-│  │ └─────────────────────┘              │ └ desktop.ini  ●  │ │  │
-│  │ ┌─────────────────────┐              │ 📁 Payroll        │ │  │
-│  │ │ 📝 Word Document    │              │ └ Paystubs.xlsx ● │ │  │
-│  │ │ Triggers when opened│              │ 📁 Benefits       │ │  │
-│  │ │ in Microsoft Word   │              │ └ Guide.pdf    ●  │ │  │
-│  │ └─────────────────────┘              └───────────────────┘ │  │
+│  │ ┌─────────────────────┐        ┌───────────────────┐       │  │
+│  │ │ 📊 Excel Document   │        │ 📁 HR Documents   │       │  │
+│  │ │ Triggers when opened│        │ ├ Salaries.xlsx ● │       │  │
+│  │ └─────────────────────┘        │ ├ Benefits.docx ● │       │  │
+│  │ ┌─────────────────────┐        │ └ desktop.ini  ●  │       │  │
+│  │ │ 📝 Word Document    │        │ 📁 Payroll        │       │  │
+│  │ │ Triggers when opened│        │ └ Paystubs.xlsx ● │       │  │
+│  │ └─────────────────────┘        └───────────────────┘       │  │
 │  │ ┌─────────────────────┐                                    │  │
-│  │ │ 📕 PDF Document     │              ● = has token         │  │
-│  │ │ Triggers in Adobe   │                                    │  │
-│  │ │ Acrobat Reader      │              [+ Add File]          │  │
+│  │ │ 📕 PDF Document     │        ● = has token               │  │
 │  │ └─────────────────────┘                                    │  │
-│  │ ┌─────────────────────┐                                    │  │
+│  │ ┌─────────────────────┐        [+ Add File]                │  │
 │  │ │ 📁 Folder Token     │                                    │  │
-│  │ │ Triggers when folder│                                    │  │
-│  │ │ is browsed          │                                    │  │
 │  │ └─────────────────────┘                                    │  │
 │  │ ┌─────────────────────┐                                    │  │
 │  │ │ 🔗 Web Link         │                                    │  │
-│  │ │ URL shortcut file   │                                    │  │
-│  │ │ with tracking       │                                    │  │
 │  │ └─────────────────────┘                                    │  │
 │  │ ┌─────────────────────┐                                    │  │
 │  │ │ 📷 QR Code          │                                    │  │
-│  │ │ Image with tracking │                                    │  │
-│  │ │ QR code             │                                    │  │
 │  │ └─────────────────────┘                                    │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │ 📤 File Upload                                               │  │
+│  │ Upload custom documents, images, or other files             │  │
+│  │ [Choose Files] or drag and drop                             │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### File Configuration Panel (appears when file selected)
+### Components
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ Configure: Employee_Salaries_2024.xlsx                   [X] │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  File Name:   [Employee_Salaries_2024.xlsx    ]              │
-│  Location:    [HR Documents              ▼]                  │
-│  Token Type:  [📊 Excel Document         ▼]                  │
-│                                                              │
-│  ─────────────────────────────────────────────────────────── │
-│                                                              │
-│  Link Token Settings (for Web Link type)                     │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │ Token Behavior:                                        │  │
-│  │   ○ Web Bug (silent tracking)                          │  │
-│  │   ○ Fast Redirect (immediate redirect)                 │  │
-│  │   ● Slow Redirect (fingerprint + redirect)             │  │
-│  │                                                        │  │
-│  │ Redirect URL:                                          │  │
-│  │   ○ Google Drive    ○ SharePoint    ○ OneDrive         │  │
-│  │   ○ Login Page      ○ Error Page    ● Custom           │  │
-│  │   [https://drive.google.com/file/d/shared    ]         │  │
-│  │                                                        │  │
-│  │ ☑ Enable browser fingerprinting                        │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                                                              │
-├──────────────────────────────────────────────────────────────┤
-│  [Delete File]                    [Cancel]  [Save Changes]   │
-└──────────────────────────────────────────────────────────────┘
-```
+- **TokenPalette.vue** - Displays available token types
+- **FileUploader.vue** - Handles file uploads to profile
+- **TemplateEditor.vue** - Rich text editor for custom content with placeholder support
 
 ### Data Output
 ```javascript
@@ -297,14 +231,10 @@ Configure which files to create and what token types to embed in each.
       token_config: {}
     },
     {
-      name: "Exclusive_Content.url",
-      folder: "My Links",
-      token_type: "web_link",
-      token_config: {
-        behavior: "slow-redirect",
-        redirect_url: "https://drive.google.com/...",
-        browser_fingerprint: true
-      }
+      name: "readme.txt",
+      folder: "HR Documents",
+      token_type: "url",
+      custom_content: "Check salary info: {canary_token-URL}"
     }
   ]
 }
@@ -315,7 +245,7 @@ Configure which files to create and what token types to embed in each.
 ## Step 4: Content & URL Shortening
 
 ### Purpose
-Configure content details, AI-generated images, and URL shortening for link tokens.
+Configure URL shortening settings, create shortcuts and templates, and set USB label suggestions.
 
 ### UI Layout
 
@@ -326,108 +256,107 @@ Configure content details, AI-generated images, and URL shortening for link toke
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ 📝 Text File Templates                                       │  │
-│  │                                                             │  │
-│  │ my-links.txt uses template: [Social Links Template    ▼]   │  │
-│  │                                                             │  │
-│  │ ┌─────────────────────────────────────────────────────────┐ │  │
-│  │ │ MY SOCIAL LINKS                                         │ │  │
-│  │ │ ===============                                         │ │  │
-│  │ │ Updated: December 31, 2025                              │ │  │
-│  │ │                                                         │ │  │
-│  │ │ Subscribe: {tracking_url}                               │ │  │
-│  │ │ Exclusive: {tracking_url}                               │ │  │
-│  │ │ ...                                                     │ │  │
-│  │ └─────────────────────────────────────────────────────────┘ │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-│  ┌─────────────────────────────────────────────────────────────┐  │
 │  │ 🔗 URL Shortener Configuration                               │  │
 │  │                                                             │  │
-│  │ Shortener:  ● Shlink (self-hosted)  ○ None  ○ Manual       │  │
+│  │ ☑ Enable URL Shortening                                     │  │
 │  │                                                             │  │
-│  │ ┌─────────────────────────────────────────────────────────┐ │  │
-│  │ │ Domain: [links.subproject55.com              ▼]         │ │  │
-│  │ │                                                         │ │  │
-│  │ │ URL Mappings:                                           │ │  │
-│  │ │ ┌─────────────────────────────────────────────────────┐ │ │  │
-│  │ │ │ Token              │ Short Path    │ Preview        │ │ │  │
-│  │ │ ├────────────────────┼───────────────┼────────────────┤ │ │  │
-│  │ │ │ Subscribe Link     │ [subscribe ]  │ links.../sub.. │ │ │  │
-│  │ │ │ Exclusive Content  │ [exclusive ]  │ links.../exc.. │ │ │  │
-│  │ │ │ Tip Me             │ [tip       ]  │ links.../tip   │ │ │  │
-│  │ │ │ YouTube Channel    │ [youtube   ]  │ links.../you.. │ │ │  │
-│  │ │ │ Merch Store        │ [merch     ]  │ links.../merch │ │ │  │
-│  │ │ └─────────────────────────────────────────────────────┘ │ │  │
-│  │ │                                                         │ │  │
-│  │ │ [Auto-Generate Paths]  [Clear All]                      │ │  │
-│  │ └─────────────────────────────────────────────────────────┘ │  │
+│  │ Base Slug: [hr-docs                    ]                    │  │
+│  │                                                             │  │
+│  │ Suffix Mode:                                                │  │
+│  │   ● Random (e.g., hr-docs-x7k2)                            │  │
+│  │   ○ Sequential (e.g., hr-docs-001)                         │  │
+│  │   ○ Drive Code (e.g., hr-docs-usba1b2c3)                   │  │
+│  │                                                             │  │
+│  │ Suffix Length: [4] (for random mode)                        │  │
+│  │                                                             │  │
+│  │ Preview: https://links.yourdomain.com/hr-docs-x7k2          │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │ 🖼️ Images                                                    │  │
+│  │ 📝 Create Files                                              │  │
 │  │                                                             │  │
-│  │ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐    │  │
-│  │ │ 📷        │ │ 📷        │ │ 📷        │ │ ➕         │    │  │
-│  │ │ selfie1   │ │ selfie2   │ │ product   │ │ Add Image │    │  │
-│  │ │ [Template]│ │ [Template]│ │ [AI Gen]  │ │           │    │  │
-│  │ └───────────┘ └───────────┘ └───────────┘ └───────────┘    │  │
+│  │ [+ Create Shortcut]  [+ Create Template]                    │  │
 │  │                                                             │  │
-│  │ Source: ○ Template Images  ○ AI Generated  ○ Upload        │  │
+│  │ Note: Save profile first to enable file creation            │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │ 🏷️ USB Drive Label Suggestions                               │  │
 │  │                                                             │  │
-│  │ [JESSICA'S STUFF    ] [BACKUP - DO NOT DELETE] [+ Add]     │  │
+│  │ [HR PAYROLL Q4    ] [CONFIDENTIAL] [+ Add]                  │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### URL Shortener Domain Selector
+### URL Shortener Configuration
+
+| Field | Description |
+|-------|-------------|
+| `enabled` | Toggle URL shortening on/off |
+| `base_slug` | Base path for short URLs (e.g., "hr-docs") |
+| `suffix_mode` | `random`, `sequential`, or `drive_code` |
+| `suffix_length` | Length of random suffix (2-12 characters) |
+| `domain` | Short URL domain (from Settings) |
+
+### Shortcut Creation Modal
 
 ```
-┌────────────────────────────────────────────────┐
-│ Select Domain                              [X] │
-├────────────────────────────────────────────────┤
-│                                                │
-│  Available Domains:                            │
-│                                                │
-│  ● links.subproject55.com (default)           │
-│  ○ files.subproject55.com                     │
-│  ○ docs.subproject55.com                      │
-│  ○ share.subproject55.com                     │
-│                                                │
-│  ─────────────────────────────────────────     │
-│  [+ Add New Domain]                            │
-│                                                │
-├────────────────────────────────────────────────┤
-│                              [Cancel] [Select] │
-└────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Create URL Shortcut                                      [X] │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Filename: [Company_Portal.url           ]                   │
+│  Folder:   [HR Documents            ▼]                       │
+│  Target URL: [https://example.com/login   ]                  │
+│                                                              │
+│  Shortcut Type:                                              │
+│    ● Both (.url and .webloc)                                │
+│    ○ Windows only (.url)                                    │
+│    ○ macOS only (.webloc)                                   │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│                              [Cancel]  [Create Shortcut]     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Template Creation Modal
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Create Text Template                                     [X] │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Filename: [readme.txt                   ]                   │
+│  Folder:   [HR Documents            ▼]                       │
+│                                                              │
+│  Content:                                                    │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ IMPORTANT FILES                                        │  │
+│  │ ==============                                         │  │
+│  │                                                        │  │
+│  │ Access salary data: {canary_token-URL}                 │  │
+│  │ View benefits: {canary_token-URL}                      │  │
+│  │                                                        │  │
+│  │ Placeholders: {canary_token-URL}, {drive_code}         │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│                              [Cancel]  [Create Template]     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Output
 ```javascript
 {
-  text_templates: {
-    "my-links.txt": "social_links"
-  },
   url_shortener: {
     enabled: true,
-    provider: "shlink",
-    domain: "links.subproject55.com",
-    mappings: [
-      { token_name: "Subscribe Link", path: "subscribe" },
-      { token_name: "Exclusive Content", path: "exclusive" },
-      { token_name: "Tip Me", path: "tip" }
-    ]
+    base_slug: "hr-docs",
+    suffix_mode: "random",
+    suffix_length: 4,
+    domain: ""  // Uses default from Settings
   },
-  images: {
-    source: "template",
-    selected: ["selfie1.jpg", "selfie2.jpg", "product.jpg"]
-  },
-  label_suggestions: ["JESSICA'S STUFF", "BACKUP - DO NOT DELETE"]
+  label_suggestions: ["HR PAYROLL Q4", "CONFIDENTIAL"]
 }
 ```
 
@@ -436,257 +365,43 @@ Configure content details, AI-generated images, and URL shortening for link toke
 ## Step 5: Review & Create
 
 ### Purpose
-Review all configuration before creating the profile.
+Review all configuration before creating/updating the profile.
 
 ### UI Layout
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │ Step 5: Review & Create                                            │
-│ Review your profile configuration before creating                  │
+│ Review your profile configuration before saving                    │
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │  ┌──────────────────────────────────────┬───────────────────────┐ │
 │  │ Profile Summary                      │ USB Preview           │ │
 │  │                                      │                       │ │
-│  │ Name: Social Creator - Jessica       │ 📁 USB Drive          │ │
-│  │ Scenario: Social/Creator             │ ├── 📁 My_Links       │ │
-│  │ Description: Influencer content...   │ │   └── 📄 my-links   │ │
-│  │                                      │ ├── 📁 Photos         │ │
-│  │ ─────────────────────────────────    │ │   ├── 🖼️ selfie1    │ │
-│  │                                      │ │   ├── 🖼️ selfie2    │ │
-│  │ 📁 Folders: 3                        │ │   └── 🖼️ product    │ │
-│  │ 📄 Files: 8                          │ ├── 📁 Collabs        │ │
-│  │ 🎯 Tokens: 6                         │ │   └── 📄 rates.pdf  │ │
-│  │ 🔗 Short URLs: 5                     │ └── 📁 Exclusive      │ │
-│  │                                      │     └── 📄 content    │ │
+│  │ Name: HR Documents - Q4 Campaign     │ 📁 USB Drive          │ │
+│  │ Scenario: HR                         │ ├── 📁 HR Documents   │ │
+│  │ Description: Salary and benefits...  │ │   ├── 📄 Salaries   │ │
+│  │                                      │ │   ├── 📄 Benefits   │ │
+│  │ ─────────────────────────────────    │ │   └── 📄 readme.txt │ │
+│  │                                      │ ├── 📁 Payroll        │ │
+│  │ 📁 Folders: 3                        │ │   └── 📄 Paystubs   │ │
+│  │ 📄 Files: 5                          │ └── 📁 Benefits       │ │
+│  │ 🎯 Tokens: 4                         │                       │ │
+│  │ 📤 Uploaded: 2                       │ [Expand All]          │ │
+│  │                                      │                       │ │
 │  │ ─────────────────────────────────    │                       │ │
-│  │                                      │ [Expand All]          │ │
-│  │ Token Breakdown:                     │                       │ │
-│  │ • 2x Word Documents                  │                       │ │
-│  │ • 1x Excel Spreadsheet               │                       │ │
-│  │ • 1x PDF Document                    │                       │ │
-│  │ • 2x Web Links (slow redirect)       │                       │ │
+│  │                                      │                       │ │
+│  │ URL Shortening: Enabled              │                       │ │
+│  │ Base Slug: hr-docs                   │                       │ │
+│  │ Suffix Mode: random                  │                       │ │
 │  │                                      │                       │ │
 │  └──────────────────────────────────────┴───────────────────────┘ │
 │                                                                    │
-│  ┌──────────────────────────────────────────────────────────────┐ │
-│  │ 🔗 Short URL Preview                                          │ │
-│  │                                                              │ │
-│  │  Token                  Short URL                            │ │
-│  │  ───────────────────────────────────────────────────────────  │ │
-│  │  Subscribe Link         https://links.subproject55.com/sub.. │ │
-│  │  Exclusive Content      https://links.subproject55.com/exc.. │ │
-│  │  Tip Me                 https://links.subproject55.com/tip   │ │
-│  │  YouTube Channel        https://links.subproject55.com/you.. │ │
-│  │  Merch Store            https://links.subproject55.com/merch │ │
-│  │                                                              │ │
-│  └──────────────────────────────────────────────────────────────┘ │
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────────────┐ │
-│  │ ⚠️  This will create 6 CanaryTokens and 5 short URLs          │ │
-│  └──────────────────────────────────────────────────────────────┘ │
-│                                                                    │
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
-│  [Cancel]              [← Back]        [Create Profile]            │
-│                                                                    │
-│                        ☐ Create as draft (don't generate tokens)   │
+│  [Cancel]              [← Back]        [Save Profile]              │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Shlink Integration
-
-### Infrastructure Addition
-
-```yaml
-# docker-compose.yml addition
-services:
-  shlink:
-    image: shlinkio/shlink:stable
-    container_name: shlink
-    restart: unless-stopped
-    environment:
-      DEFAULT_DOMAIN: links.subproject55.com
-      IS_HTTPS_ENABLED: "true"
-      GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY:-}
-      DB_DRIVER: postgres
-      DB_HOST: postgres
-      DB_NAME: shlink
-      DB_USER: shlink
-      DB_PASSWORD: ${SHLINK_DB_PASSWORD}
-      INITIAL_API_KEY: ${SHLINK_API_KEY}
-    ports:
-      - "8090:8080"
-    depends_on:
-      - postgres
-    networks:
-      - internal
-
-  shlink-web:
-    image: shlinkio/shlink-web-client:stable
-    container_name: shlink-web
-    restart: unless-stopped
-    environment:
-      SHLINK_SERVER_URL: https://links.subproject55.com
-      SHLINK_SERVER_API_KEY: ${SHLINK_API_KEY}
-    ports:
-      - "8091:8080"
-    networks:
-      - internal
-```
-
-### Database Schema Addition
-
-```sql
--- Add to existing schema
-CREATE TABLE short_urls (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-    token_id UUID REFERENCES tokens(id) ON DELETE CASCADE,
-
-    -- Shlink reference
-    shlink_short_code VARCHAR(50) NOT NULL,
-    shlink_domain VARCHAR(255) NOT NULL,
-
-    -- URL details
-    original_url TEXT NOT NULL,
-    short_url TEXT NOT NULL,
-    custom_slug VARCHAR(100),
-
-    -- Metadata
-    created_at TIMESTAMP DEFAULT NOW(),
-    click_count INTEGER DEFAULT 0,
-    last_clicked_at TIMESTAMP,
-
-    UNIQUE(shlink_domain, shlink_short_code)
-);
-
-CREATE INDEX idx_short_urls_profile ON short_urls(profile_id);
-CREATE INDEX idx_short_urls_token ON short_urls(token_id);
-```
-
-### API Endpoints
-
-```
-POST   /api/shortener/domains          - List available domains
-POST   /api/shortener/create           - Create short URL
-GET    /api/shortener/profile/{id}     - Get short URLs for profile
-DELETE /api/shortener/{short_code}     - Delete short URL
-POST   /api/shortener/bulk-create      - Create multiple short URLs
-
-GET    /api/profiles/{id}/with-urls    - Get profile with short URLs
-POST   /api/profiles/{id}/regenerate-urls - Regenerate all short URLs
-```
-
-### Shlink Client Service
-
-```python
-# app/services/shlink_client.py
-
-class ShlinkClient:
-    """Client for self-hosted Shlink URL shortener."""
-
-    def __init__(self):
-        self.base_url = settings.shlink_url
-        self.api_key = settings.shlink_api_key
-
-    async def create_short_url(
-        self,
-        long_url: str,
-        custom_slug: str = None,
-        domain: str = None,
-        tags: list = None
-    ) -> dict:
-        """Create a shortened URL."""
-        pass
-
-    async def delete_short_url(self, short_code: str, domain: str = None) -> bool:
-        """Delete a short URL."""
-        pass
-
-    async def get_short_url_stats(self, short_code: str, domain: str = None) -> dict:
-        """Get click statistics for a short URL."""
-        pass
-
-    async def list_domains(self) -> list:
-        """List available domains."""
-        pass
-```
-
----
-
-## Frontend State Management
-
-### Pinia Store
-
-```javascript
-// stores/profileWizard.js
-
-export const useProfileWizardStore = defineStore('profileWizard', {
-  state: () => ({
-    currentStep: 1,
-    totalSteps: 5,
-
-    // Step 1: Scenario
-    scenario: {
-      type: null,
-      template_id: null,
-      name: '',
-      description: ''
-    },
-
-    // Step 2: Folders
-    folders: [],
-
-    // Step 3: Tokens
-    files: [],
-
-    // Step 4: Content
-    content: {
-      text_templates: {},
-      url_shortener: {
-        enabled: true,
-        provider: 'shlink',
-        domain: 'links.subproject55.com',
-        mappings: []
-      },
-      images: {
-        source: 'template',
-        selected: []
-      },
-      label_suggestions: []
-    },
-
-    // Validation
-    errors: {},
-
-    // Edit mode
-    isEditing: false,
-    editingProfileId: null
-  }),
-
-  actions: {
-    nextStep() { ... },
-    prevStep() { ... },
-    goToStep(step) { ... },
-    validateCurrentStep() { ... },
-    loadFromTemplate(templateId) { ... },
-    loadForEditing(profileId) { ... },
-    saveProfile() { ... },
-    reset() { ... }
-  },
-
-  getters: {
-    canProceed: (state) => { ... },
-    profileSummary: (state) => { ... },
-    tokenCount: (state) => { ... },
-    shortUrlCount: (state) => { ... }
-  }
-})
 ```
 
 ---
@@ -696,166 +411,133 @@ export const useProfileWizardStore = defineStore('profileWizard', {
 ```
 src/
 ├── views/
-│   └── ProfileWizard.vue              # Main wizard container
+│   └── Profiles.vue              # Contains wizard or links to it
 │
 ├── components/
 │   └── wizard/
-│       ├── WizardProgress.vue         # Step indicator
-│       ├── WizardNavigation.vue       # Back/Next/Cancel buttons
+│       ├── WizardProgress.vue    # Step indicator (1-5 dots)
+│       ├── WizardNavigation.vue  # Back/Next/Cancel buttons
 │       │
-│       ├── steps/
-│       │   ├── ScenarioStep.vue       # Step 1
-│       │   ├── FolderStep.vue         # Step 2
-│       │   ├── TokenStep.vue          # Step 3
-│       │   ├── ContentStep.vue        # Step 4
-│       │   └── ReviewStep.vue         # Step 5
+│       ├── ScenarioStep.vue      # Step 1 - Template selection
+│       ├── FolderStep.vue        # Step 2 - Folder structure
+│       ├── TokenStep.vue         # Step 3 - File/token config
+│       ├── ContentStep.vue       # Step 4 - URLs & content
+│       └── ReviewStep.vue        # Step 5 - Final review
 │       │
-│       ├── scenario/
-│       │   ├── ScenarioCard.vue       # Scenario selection card
-│       │   └── ScenarioPreview.vue    # Template preview modal
-│       │
-│       ├── folder/
-│       │   ├── FolderTree.vue         # Drag-drop folder tree
-│       │   ├── FolderNode.vue         # Individual folder node
-│       │   └── FolderProperties.vue   # Folder settings panel
-│       │
-│       ├── token/
-│       │   ├── TokenPalette.vue       # Draggable token types
-│       │   ├── FileList.vue           # Files with tokens
-│       │   ├── FileConfig.vue         # File configuration modal
-│       │   └── LinkTokenConfig.vue    # Link-specific options
-│       │
-│       ├── content/
-│       │   ├── TextTemplates.vue      # Text file templates
-│       │   ├── UrlShortener.vue       # URL shortener config
-│       │   ├── UrlMappingTable.vue    # Short URL mappings
-│       │   ├── ImageSelector.vue      # Image selection
-│       │   └── LabelSuggestions.vue   # USB label suggestions
-│       │
-│       └── review/
-│           ├── ProfileSummary.vue     # Summary stats
-│           ├── UsbPreview.vue         # File tree preview
-│           └── ShortUrlPreview.vue    # Short URL list
+│       ├── TokenPalette.vue      # Draggable token type cards
+│       ├── VisualFileTree.vue    # Interactive file tree display
+│       ├── FileUploader.vue      # File upload component
+│       └── TemplateEditor.vue    # Rich text editor with placeholders
 │
 └── stores/
-    └── profileWizard.js               # Wizard state management
+    └── profileWizard.js          # Pinia store (Composition API)
 ```
 
 ---
 
-## API Service
+## State Management (Pinia)
+
+**File**: `src/stores/profileWizard.js`
+
+Uses Vue 3 Composition API style:
 
 ```javascript
-// services/api.js additions
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 
-export const profileWizardApi = {
-  // Templates
-  getTemplates: () => api.get('/profiles/templates/list'),
-  getTemplate: (id) => api.get(`/profiles/templates/${id}`),
+export const useProfileWizardStore = defineStore('profileWizard', () => {
+  // Step management
+  const currentStep = ref(1)
+  const totalSteps = 5
 
-  // Shortener
-  getShortenerDomains: () => api.get('/shortener/domains'),
-  createShortUrl: (data) => api.post('/shortener/create', data),
-  bulkCreateShortUrls: (data) => api.post('/shortener/bulk-create', data),
-  deleteShortUrl: (code) => api.delete(`/shortener/${code}`),
+  // Step 1: Scenario
+  const scenario = ref({
+    type: null,
+    template_id: null,
+    name: '',
+    description: ''
+  })
 
-  // Profile with URLs
-  getProfileWithUrls: (id) => api.get(`/profiles/${id}/with-urls`),
-  regenerateUrls: (id) => api.post(`/profiles/${id}/regenerate-urls`),
+  // Step 2: Folders
+  const folders = ref([])
 
-  // Wizard actions
-  validateStep: (step, data) => api.post('/profiles/wizard/validate', { step, data }),
-  createFromWizard: (data) => api.post('/profiles/wizard/create', data),
-  updateFromWizard: (id, data) => api.put(`/profiles/wizard/${id}`, data)
-}
+  // Step 3: Files/Tokens
+  const files = ref([])
+
+  // Uploaded files (from API)
+  const uploadedFiles = ref([])
+
+  // Step 4: Content
+  const content = ref({
+    text_templates: {},
+    url_shortener: {
+      enabled: false,
+      base_slug: '',
+      suffix_mode: 'random',
+      suffix_length: 4,
+      domain: ''
+    },
+    images: {
+      source: 'template',
+      selected: []
+    },
+    label_suggestions: []
+  })
+
+  // Edit mode
+  const isEditing = ref(false)
+  const editingProfileId = ref(null)
+
+  // Loading states
+  const loading = ref(false)
+  const saving = ref(false)
+
+  // Computed
+  const canProceed = computed(() => { /* validation logic */ })
+  const tokenCount = computed(() => files.value.filter(f => f.token_type).length)
+  const profileSummary = computed(() => ({ /* summary object */ }))
+
+  // Actions
+  function nextStep() { /* ... */ }
+  function prevStep() { /* ... */ }
+  async function loadTemplate(templateId) { /* ... */ }
+  async function loadForEditing(profileId) { /* ... */ }
+  async function saveProfile() { /* ... */ }
+
+  // Folder management
+  function addFolder(path) { /* ... */ }
+  function removeFolder(path) { /* ... */ }
+  function updateFolder(oldPath, newPath) { /* ... */ }
+
+  // File management
+  function addFile(file) { /* ... */ }
+  function removeFile(index) { /* ... */ }
+  function updateFile(index, updates) { /* ... */ }
+
+  // Uploaded file management
+  async function loadUploadedFiles(profileId) { /* ... */ }
+  function addUploadedFile(file) { /* ... */ }
+  async function removeUploadedFile(profileId, fileId) { /* ... */ }
+
+  function reset() { /* ... */ }
+
+  return {
+    // State
+    currentStep, totalSteps, scenario, folders, files,
+    uploadedFiles, content, isEditing, editingProfileId,
+    loading, saving,
+
+    // Computed
+    canProceed, tokenCount, profileSummary,
+
+    // Actions
+    nextStep, prevStep, loadTemplate, loadForEditing,
+    saveProfile, addFolder, removeFolder, updateFolder,
+    addFile, removeFile, updateFile, loadUploadedFiles,
+    addUploadedFile, removeUploadedFile, reset
+  }
+})
 ```
-
----
-
-## Environment Variables
-
-```bash
-# .env additions for Shlink
-
-# Shlink URL Shortener
-SHLINK_URL=http://shlink:8080
-SHLINK_API_KEY=your-shlink-api-key
-SHLINK_DEFAULT_DOMAIN=links.subproject55.com
-SHLINK_DB_PASSWORD=your-shlink-db-password
-
-# Optional: GeoLite2 for geographic stats
-GEOLITE_LICENSE_KEY=your-maxmind-key
-```
-
----
-
-## Caddy Configuration
-
-```caddyfile
-# Add to Caddyfile for Shlink
-
-links.subproject55.com {
-    reverse_proxy shlink:8080
-}
-
-# Optional: Shlink admin UI
-shlink-admin.subproject55.com {
-    reverse_proxy shlink-web:8080
-
-    # Restrict to admin IPs
-    @blocked not remote_ip 10.0.0.0/8 192.168.0.0/16
-    respond @blocked 403
-}
-```
-
----
-
-## Implementation Phases
-
-### Phase 1: Core Wizard (MVP)
-- [ ] Wizard container and navigation
-- [ ] Step 1: Scenario selection with templates
-- [ ] Step 2: Basic folder management
-- [ ] Step 3: Token assignment (no link config)
-- [ ] Step 5: Review and create
-- [ ] Integration with existing profile API
-
-### Phase 2: Advanced Tokens
-- [ ] Step 3: Link token configuration (redirect, fingerprint)
-- [ ] Step 4: Text templates
-- [ ] Step 4: Image selection
-- [ ] Enhanced review with token breakdown
-
-### Phase 3: URL Shortener
-- [ ] Shlink Docker integration
-- [ ] Shlink API client service
-- [ ] Step 4: URL shortener configuration
-- [ ] Short URL database model
-- [ ] Bulk short URL creation on profile save
-
-### Phase 4: Polish
-- [ ] Drag-and-drop folder tree
-- [ ] Drag-and-drop token assignment
-- [ ] Real-time validation
-- [ ] Edit existing profile flow
-- [ ] Clone profile functionality
-- [ ] Keyboard shortcuts
-
----
-
-## Design Decisions
-
-1. **Domain Management**: Admin-only. Regular users select from pre-configured domains in a dropdown. Admins manage domains via Shlink admin UI or dedicated admin settings page.
-
-2. **Short URL Lifecycle**: Delete short URLs when drive is deleted. Cascade delete via foreign key relationship. Short URLs belong to drives, not profiles.
-
-3. **Click Analytics**: No. Click stats are not displayed in the campaign dashboard. Use Shlink admin UI for URL analytics if needed.
-
-4. **Bulk Operations**: Yes. Provide ability to apply the same short URL domain/pattern across multiple profiles (e.g., "Apply `hr.company.link` domain to all HR profiles").
-
-5. **Slug Validation**: Yes. Real-time validation of short URL slugs for conflicts before the final step. Show inline error if slug already exists on selected domain.
-
-6. **Unique URLs Per Drive**: Yes. Each drive created from a profile generates unique short URLs. Profile defines the pattern/template; drive creation generates unique instances.
 
 ---
 
@@ -870,9 +552,9 @@ shlink-admin.subproject55.com {
 │                                                                     │
 │   Defines URL Pattern:                                              │
 │   ┌─────────────────────────────────────────────────────────────┐  │
-│   │  Domain: links.company.com                                   │  │
-│   │  Base Slug: salary-info                                      │  │
-│   │  Suffix Mode: [random | sequential | drive-code]             │  │
+│   │  Base Slug: hr-docs                                         │  │
+│   │  Suffix Mode: random | sequential | drive_code              │  │
+│   │  Suffix Length: 4                                           │  │
 │   └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -885,20 +567,14 @@ shlink-admin.subproject55.com {
 │                                                                     │
 │   Drive USB-A1B2C3:                                                 │
 │   ┌─────────────────────────────────────────────────────────────┐  │
-│   │  links.company.com/salary-info-a1b2c3                        │  │
-│   │  Unique CanaryToken → Unique Short URL                       │  │
+│   │  links.yourdomain.com/hr-docs-x7k2                          │  │
+│   │  Unique CanaryToken → Unique Short URL                      │  │
 │   └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 │   Drive USB-D4E5F6:                                                 │
 │   ┌─────────────────────────────────────────────────────────────┐  │
-│   │  links.company.com/salary-info-d4e5f6                        │  │
-│   │  Unique CanaryToken → Unique Short URL                       │  │
-│   └─────────────────────────────────────────────────────────────┘  │
-│                                                                     │
-│   Drive USB-G7H8I9:                                                 │
-│   ┌─────────────────────────────────────────────────────────────┐  │
-│   │  links.company.com/salary-info-g7h8i9                        │  │
-│   │  Unique CanaryToken → Unique Short URL                       │  │
+│   │  links.yourdomain.com/hr-docs-m9p4                          │  │
+│   │  Unique CanaryToken → Unique Short URL                      │  │
 │   └─────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -908,10 +584,9 @@ shlink-admin.subproject55.com {
 
 | Mode | Example | Use Case |
 |------|---------|----------|
-| **Random** | `salary-info-x7k9m2` | Default, hard to guess |
-| **Sequential** | `salary-info-001`, `salary-info-002` | Easy to track order |
-| **Drive Code** | `salary-info-USB-A1B2C3` | Ties directly to drive ID |
-| **Custom** | User-defined per drive | Special cases |
+| **random** | `hr-docs-x7k9` | Default, hard to guess |
+| **sequential** | `hr-docs-001` | Easy to track order |
+| **drive_code** | `hr-docs-usba1b2c3` | Ties directly to drive ID |
 
 ### Generation Flow
 
@@ -922,7 +597,6 @@ Drive Creation Request
 ┌─────────────────────────┐
 │ 1. Load Profile Config  │
 │    - URL patterns       │
-│    - Domain             │
 │    - Suffix mode        │
 └───────────┬─────────────┘
             │
@@ -941,7 +615,7 @@ Drive Creation Request
 │                         │
 │  b. Generate Short Slug │
 │     base + suffix       │
-│     "salary-info-a1b2c3"│
+│     "hr-docs-x7k2"      │
 │                         │
 │  c. Create Shlink URL   │
 │     Short → Canary URL  │
@@ -959,45 +633,78 @@ Drive Creation Request
 └─────────────────────────┘
 ```
 
-### Updated Database Schema
+---
+
+## API Endpoints
+
+### Profile Wizard
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/profiles/templates` | List available templates |
+| GET | `/api/profiles/templates/{id}` | Get template details |
+| POST | `/api/profiles` | Create profile |
+| PUT | `/api/profiles/{id}` | Update profile |
+| GET | `/api/profiles/{id}` | Get profile for editing |
+
+### Profile Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/profiles/{id}/files` | List uploaded files |
+| POST | `/api/profiles/{id}/files` | Upload file |
+| PUT | `/api/profiles/{id}/files/{fid}` | Update file metadata |
+| DELETE | `/api/profiles/{id}/files/{fid}` | Delete file |
+| POST | `/api/profiles/{id}/shortcuts` | Create URL shortcut |
+| POST | `/api/profiles/{id}/templates` | Create text template |
+
+### Shortener
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/shortener/status` | Get Shlink status |
+| GET | `/api/shortener/domains` | List available domains |
+| POST | `/api/shortener/create` | Create short URL |
+| DELETE | `/api/shortener/{code}` | Delete short URL |
+
+---
+
+## Database Schema
+
+### Profile URL Configuration
 
 ```sql
--- Profile stores URL templates/patterns
-ALTER TABLE profiles ADD COLUMN url_config JSONB DEFAULT '{}';
+-- Stored in profiles.url_config JSONB column
+{
+  "enabled": true,
+  "base_slug": "hr-docs",
+  "suffix_mode": "random",
+  "suffix_length": 4,
+  "domain": null  -- Uses default if null
+}
+```
 
--- Example url_config:
--- {
---   "domain": "links.company.com",
---   "suffix_mode": "drive-code",  -- random | sequential | drive-code | custom
---   "patterns": [
---     { "token_name": "Subscribe Link", "base_slug": "subscribe" },
---     { "token_name": "Exclusive Content", "base_slug": "exclusive" }
---   ]
--- }
+### Short URLs Table
 
--- Short URLs belong to DRIVES, not profiles
+```sql
 CREATE TABLE short_urls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     drive_id UUID NOT NULL REFERENCES drives(id) ON DELETE CASCADE,
-    token_id UUID NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
+    token_id UUID REFERENCES tokens(id) ON DELETE CASCADE,
 
-    -- Pattern source (from profile)
+    -- Slug components
     base_slug VARCHAR(100) NOT NULL,
-    suffix_mode VARCHAR(20) NOT NULL,
-
-    -- Generated values
-    generated_suffix VARCHAR(50) NOT NULL,
-    full_slug VARCHAR(150) NOT NULL,  -- base_slug + generated_suffix
+    suffix VARCHAR(50) NOT NULL,
+    full_slug VARCHAR(150) NOT NULL,
 
     -- Shlink reference
     shlink_short_code VARCHAR(50) NOT NULL,
     shlink_domain VARCHAR(255) NOT NULL,
 
     -- URLs
-    canary_url TEXT NOT NULL,         -- Original CanaryToken URL
-    short_url TEXT NOT NULL,          -- Final short URL
+    canary_url TEXT NOT NULL,
+    short_url TEXT NOT NULL,
 
-    -- Metadata
     created_at TIMESTAMP DEFAULT NOW(),
 
     UNIQUE(shlink_domain, shlink_short_code)
@@ -1007,58 +714,60 @@ CREATE INDEX idx_short_urls_drive ON short_urls(drive_id);
 CREATE INDEX idx_short_urls_token ON short_urls(token_id);
 ```
 
-### Wizard Step 4 Update
+---
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ 🔗 URL Shortener Configuration                                     │
-│                                                                    │
-│ These settings define URL PATTERNS. Unique URLs are generated     │
-│ for each drive created from this profile.                         │
-│                                                                    │
-│ Domain: [links.company.com                    ▼]                   │
-│                                                                    │
-│ Suffix Mode:                                                       │
-│   ● Random (e.g., salary-info-x7k9m2)                             │
-│   ○ Sequential (e.g., salary-info-001)                            │
-│   ○ Drive Code (e.g., salary-info-USB-A1B2)                       │
-│                                                                    │
-│ ┌────────────────────────────────────────────────────────────────┐│
-│ │ Token              │ Base Slug      │ Example Output           ││
-│ ├────────────────────┼────────────────┼──────────────────────────┤│
-│ │ Subscribe Link     │ [subscribe  ]  │ .../subscribe-{suffix}   ││
-│ │ Exclusive Content  │ [exclusive  ]  │ .../exclusive-{suffix}   ││
-│ │ Tip Me             │ [tip        ]  │ .../tip-{suffix}         ││
-│ └────────────────────────────────────────────────────────────────┘│
-│                                                                    │
-│ Preview (example drive USB-A1B2C3):                               │
-│   • links.company.com/subscribe-a1b2c3                            │
-│   • links.company.com/exclusive-a1b2c3                            │
-│   • links.company.com/tip-a1b2c3                                  │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
+## Implementation Status
 
-### DriveDetail View - Short URLs Section
+### Phase 1: Core Wizard ✅
+- [x] Wizard container and navigation
+- [x] Step 1: Scenario selection with templates
+- [x] Step 2: Folder management
+- [x] Step 3: Token assignment
+- [x] Step 5: Review and create
+- [x] Integration with profile API
+- [x] Edit existing profile flow
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ Drive: USB-A1B2C3                                                  │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│ 🔗 Short URLs (unique to this drive)                               │
-│                                                                    │
-│ ┌────────────────────────────────────────────────────────────────┐│
-│ │ Token              │ Short URL                        │ Copy  ││
-│ ├────────────────────┼──────────────────────────────────┼───────┤│
-│ │ Subscribe Link     │ links.company.com/subscribe-a1b2 │ [📋]  ││
-│ │ Exclusive Content  │ links.company.com/exclusive-a1b2 │ [📋]  ││
-│ │ Tip Me             │ links.company.com/tip-a1b2       │ [📋]  ││
-│ │ YouTube            │ links.company.com/youtube-a1b2   │ [📋]  ││
-│ │ Merch Store        │ links.company.com/merch-a1b2     │ [📋]  ││
-│ └────────────────────────────────────────────────────────────────┘│
-│                                                                    │
-│ [Copy All URLs]  [Regenerate URLs]                                 │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
+### Phase 2: Advanced Tokens ✅
+- [x] TokenPalette component
+- [x] File upload support (FileUploader)
+- [x] Custom content with placeholders (TemplateEditor)
+- [x] VisualFileTree component
+
+### Phase 3: URL Shortener ✅
+- [x] Shlink Docker integration
+- [x] Shlink API client service
+- [x] Step 4: URL shortener configuration
+- [x] Short URL database model
+- [x] URL generation on drive preparation
+- [x] Settings page for Shlink configuration
+
+### Phase 4: Content Features ✅
+- [x] Shortcut creation (URL and webloc)
+- [x] Template creation with placeholders
+- [x] Label suggestions
+- [x] Uploaded file management
+
+### Future Enhancements
+- [ ] Drag-and-drop folder reordering
+- [ ] Drag-and-drop token assignment
+- [ ] Clone profile functionality
+- [ ] Keyboard shortcuts
+- [ ] Bulk file operations
+
+---
+
+## Design Decisions
+
+1. **Composition API**: Store uses Vue 3 Composition API for better TypeScript support and code organization.
+
+2. **Flat Component Structure**: Components are in a single `wizard/` folder rather than nested by step, simplifying imports.
+
+3. **Uploaded Files Separate**: Uploaded files are managed separately from template files, stored via API.
+
+4. **URL Config on Profile**: URL shortening configuration is stored on the profile; actual short URLs are generated per-drive.
+
+5. **Suffix Modes**: Three modes (random, sequential, drive_code) cover most use cases without complex per-token configuration.
+
+6. **Edit Mode**: Same wizard handles both create and edit, with `isEditing` flag controlling behavior.
+
+7. **Shortcut/Template Creation**: Requires saved profile (editingProfileId) since files are stored server-side.
