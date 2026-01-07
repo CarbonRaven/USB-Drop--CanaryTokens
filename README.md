@@ -47,13 +47,13 @@ This system streamlines USB drop security assessments by providing:
 ![Campaigns](docs/images/campaigns.png)
 
 ### USB Drives
-![Drives](docs/images/drives.png)
+![Drives](docs/images/drives.jpg)
 
 ### Deployment Map
 ![Map View](docs/images/map.jpg)
 
 ### Profile Templates
-![Profiles](docs/images/profiles.png)
+![Profiles](docs/images/profiles.jpg)
 
 ### Alert Feed
 ![Alerts](docs/images/alerts.png)
