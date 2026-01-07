@@ -81,8 +81,10 @@ All services run in Docker containers on a single VPS with Caddy providing autom
 ### Prerequisites
 
 - VPS with 8GB+ RAM (Debian 13 recommended)
-- Docker and Docker Compose
-- Two domains pointed to your VPS
+- Docker and Docker Compose v2+
+- **Two domains** pointed to your VPS:
+  - **App domain** (e.g., `app.example.com`, `api.example.com`) - Campaign Manager
+  - **Canary domain** (e.g., `tokens.example.com`) - CanaryTokens server
 
 ### 1. Clone and Configure
 
@@ -97,19 +99,24 @@ nano .env
 
 ### 2. Configure Required Variables
 
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VPS_IP` | Yes | Your server's public IP address |
+| `DB_PASSWORD` | Yes | PostgreSQL database password |
+| `JWT_SECRET_KEY` | Yes | Secret for JWT tokens (use `openssl rand -hex 32`) |
+| `ADMIN_USERNAME` | Yes | Initial admin account username |
+| `ADMIN_PASSWORD` | Yes | Initial admin account password |
+| `CANARY_DOMAIN` | Yes | Domain for CanaryTokens (e.g., `tokens.example.com`) |
+| `FACTORY_AUTH` | Yes | CanaryTokens factory auth token |
+| `WEBHOOK_URL` | Yes | URL for CanaryTokens alerts callback |
+| `OPENAI_API_KEY` | No | For AI content/image generation |
+| `SLACK_WEBHOOK_URL` | No | For Slack alert notifications |
+| `SHLINK_API_KEY` | No | For URL shortening via Shlink |
+| `SHLINK_DOMAIN` | No | Short URL domain (e.g., `links.example.com`) |
+
 ```bash
-# Required settings
-VPS_IP=your.server.ip
-DB_PASSWORD=secure-database-password
-JWT_SECRET_KEY=secure-random-string
-ADMIN_PASSWORD=secure-admin-password
-
-# CanaryTokens
-CANARY_DOMAIN=your-canary-domain.com
-FACTORY_AUTH=random-auth-token
-
-# Optional: AI content generation
-OPENAI_API_KEY=sk-your-openai-key
+# Generate secure secrets
+openssl rand -hex 32  # Use for DB_PASSWORD, JWT_SECRET_KEY, FACTORY_AUTH
 ```
 
 ### 3. Deploy
@@ -197,6 +204,21 @@ Each profile automatically includes:
 - Folder tokens (desktop.ini) for Windows
 - AI-generated photos in a Photos folder
 
+## Supported Token Types
+
+| Token Type | File Extension | Trigger Event |
+|------------|----------------|---------------|
+| **Word Document** | `.docx` | Document opened |
+| **Excel Spreadsheet** | `.xlsx` | Spreadsheet opened |
+| **PDF Document** | `.pdf` | PDF viewed |
+| **DNS Token** | (embedded) | DNS resolution |
+| **HTTP URL** | `.txt`, `.url` | Link clicked |
+| **QR Code** | `.png` | QR scanned and URL visited |
+| **Folder Token** | `desktop.ini` | Folder opened in Windows Explorer |
+| **HTML Beacon** | `.html` | HTML file opened in browser |
+
+All tokens are generated via CanaryTokens and trigger real-time alerts with source IP, geolocation, and user agent data.
+
 ## Believability Features
 
 Generated USB drives include multiple layers of authenticity to avoid detection as test devices:
@@ -221,11 +243,15 @@ Drives include realistic system artifacts:
 - `notes.txt`, `_README.txt` (common user files)
 - Empty folders like `Documents/Archive/`, `Templates/`
 
-### URL Shortening
-When enabled, tracking URLs are automatically shortened via Shlink:
-- Each `{canary_token-URL}` placeholder gets a unique short URL
-- URLs appear legitimate (e.g., `links.company.com/docs-a7k2`)
-- All short URLs redirect to the same canary token
+### URL Shortening (Shlink Integration)
+When enabled via profile or drive settings, tracking URLs are automatically shortened:
+- **Automatic substitution** - All `{canary_token-*}` placeholders use short URLs
+- **Unique per link** - Each placeholder in a file gets a unique short URL
+- **Configurable slugs** - Base slug + random/sequential suffix (e.g., `docs-a7k2`)
+- **Custom domain** - Use your own domain (e.g., `links.company.com`)
+- **Believable URLs** - Short URLs appear legitimate, not like tracking links
+
+Configure Shlink in Settings (admin only) or per-profile in the Profile Wizard.
 
 ## Workflow Example
 
@@ -243,6 +269,14 @@ When enabled, tracking URLs are automatically shortened via Shlink:
 - API keys for CLI/automation access
 - Database isolated in Docker network
 - Webhook signature validation
+
+### Role-Based Access Control
+
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full access: user management, settings, all operations |
+| **Operator** | Manage campaigns, drives, profiles (no user management) |
+| **Viewer** | Read-only access to dashboards and reports |
 
 ## License
 
