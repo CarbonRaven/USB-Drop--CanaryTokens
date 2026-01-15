@@ -12,6 +12,7 @@ from app.models.trigger import Trigger
 from app.models.token import Token
 from app.models.drive import Drive
 from app.models.campaign import Campaign
+from app.models.deployment import Deployment
 from app.models.user import User
 from app.routers.auth import get_current_user
 
@@ -46,6 +47,33 @@ class MapPoint(BaseModel):
     drive_code: str
     timestamp: datetime
     details: dict
+
+
+class DeploymentMapItem(BaseModel):
+    id: uuid.UUID
+    drive_code: str
+    latitude: float
+    longitude: float
+    location_description: Optional[str]
+    deployed_at: datetime
+
+
+class TriggerMapItem(BaseModel):
+    id: uuid.UUID
+    drive_code: str
+    token_type: str
+    filename: Optional[str]
+    source_ip: Optional[str]
+    geo_city: Optional[str]
+    geo_country: Optional[str]
+    geo_latitude: float
+    geo_longitude: float
+    triggered_at: datetime
+
+
+class MapDataResponse(BaseModel):
+    deployments: List[DeploymentMapItem]
+    triggers: List[TriggerMapItem]
 
 
 class AlertStats(BaseModel):
@@ -114,7 +142,9 @@ async def recent_alerts(
     """Get recent alerts (last N hours)."""
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
-    triggers = db.query(Trigger).filter(
+    triggers = db.query(Trigger).options(
+        joinedload(Trigger.token).joinedload(Token.drive).joinedload(Drive.campaign)
+    ).filter(
         Trigger.triggered_at >= cutoff
     ).order_by(Trigger.triggered_at.desc()).limit(100).all()
 
@@ -150,9 +180,9 @@ async def alert_stats(
     db: Session = Depends(get_db)
 ):
     """Get alert statistics."""
-    from app.models.deployment import Deployment
-
-    query = db.query(Trigger).join(Token).join(Drive)
+    query = db.query(Trigger).join(Token).join(Drive).options(
+        joinedload(Trigger.token)
+    )
     if campaign_id:
         query = query.filter(Drive.campaign_id == campaign_id)
 
@@ -186,72 +216,83 @@ async def alert_stats(
     )
 
 
-@router.get("/map", response_model=List[MapPoint])
-async def map_data(
+@router.get("/mapdata", response_model=List[MapPoint])
+async def map_data_new(
     campaign_id: Optional[uuid.UUID] = None,
-    include_deployments: bool = True,
-    include_triggers: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get data for map visualization."""
-    from app.models.deployment import Deployment
+    """Alias for /map endpoint."""
+    return await map_data(campaign_id, current_user, db)
 
+
+@router.get("/map", response_model=List[MapPoint])
+async def map_data(
+    campaign_id: Optional[uuid.UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get data for map visualization - returns array of map points."""
     points = []
 
-    # Get deployments
-    if include_deployments:
-        dep_query = db.query(Deployment).join(Drive)
-        if campaign_id:
-            dep_query = dep_query.filter(Drive.campaign_id == campaign_id)
-        deployments = dep_query.all()
+    # Get deployments with geo data
+    dep_query = db.query(Deployment).join(Drive).options(
+        joinedload(Deployment.drive)
+    )
+    if campaign_id:
+        dep_query = dep_query.filter(Drive.campaign_id == campaign_id)
+    dep_query = dep_query.filter(
+        Deployment.latitude.isnot(None),
+        Deployment.longitude.isnot(None)
+    )
+    deployments = dep_query.all()
 
-        for dep in deployments:
-            if dep.latitude and dep.longitude:
-                drive = dep.drive
-                points.append(MapPoint(
-                    id=dep.id,
-                    type="deployment",
-                    latitude=float(dep.latitude),
-                    longitude=float(dep.longitude),
-                    label=f"Dropped: {drive.unique_code}",
-                    drive_code=drive.unique_code,
-                    timestamp=dep.deployed_at,
-                    details={
-                        "location_name": dep.location_name,
-                        "location_type": dep.location_type,
-                        "deployed_by": dep.deployed_by,
-                    }
-                ))
+    for dep in deployments:
+        drive = dep.drive
+        points.append(MapPoint(
+            id=dep.id,
+            type="deployment",
+            latitude=float(dep.latitude),
+            longitude=float(dep.longitude),
+            label=f"Dropped: {drive.unique_code}",
+            drive_code=drive.unique_code,
+            timestamp=dep.deployed_at or dep.created_at,
+            details={
+                "location_name": dep.location_name,
+                "location_type": dep.location_type,
+            }
+        ))
 
     # Get triggers with geo data
-    if include_triggers:
-        trig_query = db.query(Trigger).join(Token).join(Drive)
-        if campaign_id:
-            trig_query = trig_query.filter(Drive.campaign_id == campaign_id)
-        trig_query = trig_query.filter(
-            Trigger.geo_latitude.isnot(None),
-            Trigger.geo_longitude.isnot(None)
-        )
-        triggers = trig_query.all()
+    trig_query = db.query(Trigger).join(Token).join(Drive).options(
+        joinedload(Trigger.token).joinedload(Token.drive)
+    )
+    if campaign_id:
+        trig_query = trig_query.filter(Drive.campaign_id == campaign_id)
+    trig_query = trig_query.filter(
+        Trigger.geo_latitude.isnot(None),
+        Trigger.geo_longitude.isnot(None)
+    )
+    triggers = trig_query.all()
 
-        for trigger in triggers:
-            token = trigger.token
-            drive = token.drive
-            points.append(MapPoint(
-                id=trigger.id,
-                type="trigger",
-                latitude=float(trigger.geo_latitude),
-                longitude=float(trigger.geo_longitude),
-                label=f"Triggered: {drive.unique_code}",
-                drive_code=drive.unique_code,
-                timestamp=trigger.triggered_at,
-                details={
-                    "token_type": token.token_type,
-                    "source_ip": str(trigger.source_ip) if trigger.source_ip else None,
-                    "city": trigger.geo_city,
-                    "country": trigger.geo_country,
-                }
-            ))
+    for trigger in triggers:
+        token = trigger.token
+        drive = token.drive
+        points.append(MapPoint(
+            id=trigger.id,
+            type="trigger",
+            latitude=float(trigger.geo_latitude),
+            longitude=float(trigger.geo_longitude),
+            label=f"Triggered: {drive.unique_code}",
+            drive_code=drive.unique_code,
+            timestamp=trigger.triggered_at,
+            details={
+                "token_type": token.token_type,
+                "filename": token.filename,
+                "source_ip": str(trigger.source_ip) if trigger.source_ip else None,
+                "geo_city": trigger.geo_city,
+                "geo_country": trigger.geo_country,
+            }
+        ))
 
     return points
