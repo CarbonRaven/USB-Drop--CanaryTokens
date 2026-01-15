@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
+**GitHub Repository**: https://github.com/CarbonRaven/USB-Drop--CanaryTokens
+
 This is a security research and **full-stack application** repository for authorized USB drop penetration testing campaigns using CanaryTokens. It includes a Campaign Manager web application, REST API, CLI tool, and research documentation.
 
 **Important**: All materials are intended for authorized penetration testing engagements with explicit written permission.
