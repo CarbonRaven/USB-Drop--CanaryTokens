@@ -68,6 +68,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
     volumes:
       - ./campaign-api:/app
       - api_uploads:/app/uploads
@@ -107,6 +108,11 @@ services:
 
   # =============================================================================
   # Redis (for CanaryTokens)
+  # Security note: Redis runs without authentication. This is intentional —
+  # the thinkst/canarytokens image does not support CANARY_REDIS_PASSWORD,
+  # so enabling --requirepass would break CanaryTokens connectivity.
+  # Redis is isolated on the 'canarytokens' Docker network; only containers
+  # on that network can reach it.
   # =============================================================================
   redis:
     image: redis:7-alpine

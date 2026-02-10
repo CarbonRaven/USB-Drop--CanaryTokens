@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, APIKeyHeader
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 import uuid
@@ -22,7 +22,8 @@ from app.services.auth_service import (
 )
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 # Password validation
@@ -134,17 +135,29 @@ class RefreshRequest(BaseModel):
 
 # Dependency to get current user
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str | None = Depends(oauth2_scheme),
+    x_api_key: str | None = Depends(api_key_header),
+    db: Session = Depends(get_db),
 ) -> User:
-    """Get current authenticated user from JWT token."""
+    """Get current authenticated user from JWT token or X-API-Key header."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Check if it's an API key
+    # Prefer X-API-Key header if present
+    if x_api_key and x_api_key.startswith("usbdrop_"):
+        user = verify_api_key(db, x_api_key)
+        if user:
+            return user
+        raise credentials_exception
+
+    # Fall back to OAuth2 bearer token
+    if not token:
+        raise credentials_exception
+
+    # Check if bearer token is actually an API key (legacy support)
     if token.startswith("usbdrop_"):
         user = verify_api_key(db, token)
         if user:
@@ -265,11 +278,12 @@ async def create_api_key(
     db: Session = Depends(get_db)
 ):
     """Create a new API key for the current user."""
-    key, key_hash = generate_api_key()
+    key, key_hash, key_prefix = generate_api_key()
 
     api_key = APIKey(
         user_id=current_user.id,
         key_hash=key_hash,
+        key_prefix=key_prefix,
         name=key_data.name,
     )
     db.add(api_key)

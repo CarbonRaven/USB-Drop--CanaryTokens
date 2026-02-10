@@ -1,10 +1,12 @@
 """Webhooks router - receive alerts from CanaryTokens."""
 
+import hmac
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 import logging
 
+from app.config import get_settings
 from app.database import SessionLocal
 from app.models.token import Token
 from app.models.trigger import Trigger
@@ -22,6 +24,15 @@ async def receive_canary_alert(
     background_tasks: BackgroundTasks
 ):
     """Receive webhook alerts from CanaryTokens server."""
+    # Validate webhook secret if configured
+    settings = get_settings()
+    if settings.webhook_secret:
+        incoming_secret = request.headers.get("X-Webhook-Secret", "")
+        if not hmac.compare_digest(incoming_secret, settings.webhook_secret):
+            raise HTTPException(status_code=403, detail="Invalid webhook secret")
+    else:
+        logger.warning("WEBHOOK_SECRET not configured — webhook endpoint is unauthenticated")
+
     try:
         # Parse request body
         content_type = request.headers.get("content-type", "")

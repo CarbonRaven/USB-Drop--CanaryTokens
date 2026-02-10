@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     admin_email: str = "admin@example.com"
     admin_password: str = "change-this-password"
 
+    # Webhook
+    webhook_secret: str = ""
+
     # Application
     app_name: str = "USB Drop Campaign Manager"
     debug: bool = False

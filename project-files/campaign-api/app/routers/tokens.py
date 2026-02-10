@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.token import Token
 from app.models.trigger import Trigger
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, get_current_operator
 from app.services.canary_client import CanaryTokensClient
 
 router = APIRouter()
@@ -77,7 +77,7 @@ async def get_token_triggers(
 @router.delete("/{token_id}")
 async def delete_token(
     token_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Delete a token."""

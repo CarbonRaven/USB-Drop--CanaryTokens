@@ -60,6 +60,7 @@ class APIKey(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     key_hash = Column(String(255), nullable=False)
+    key_prefix = Column(String(16), index=True, nullable=True)
     name = Column(String(100), nullable=False)
     last_used = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -6,8 +6,7 @@
 # Global options
 {
     email admin@subproject55.com
-    # Enable admin API on all interfaces for internal Docker network access
-    admin 0.0.0.0:2019
+    admin off
     # Uncomment for staging certificates during testing
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 }

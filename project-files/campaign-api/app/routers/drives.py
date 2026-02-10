@@ -17,7 +17,7 @@ from app.models.profile import Profile
 from app.models.deployment import Deployment
 from app.models.token import Token
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, get_current_operator
 from app.services.canary_client import CanaryTokensClient
 from app.services.usb_builder import USBBuilder
 
@@ -129,7 +129,7 @@ async def list_drives(
 @router.post("", response_model=DriveResponse)
 async def create_drive(
     drive_data: DriveCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Create a new drive record."""
@@ -181,7 +181,7 @@ async def get_drive(
 async def update_drive(
     drive_id: uuid.UUID,
     drive_data: DriveUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Update a drive."""
@@ -201,7 +201,7 @@ async def update_drive(
 @router.post("/{drive_id}/prepare", response_model=DriveResponse)
 async def prepare_drive(
     drive_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Prepare a drive - create tokens based on profile."""
@@ -269,7 +269,7 @@ async def download_drive_zip(
 async def deploy_drive(
     drive_id: uuid.UUID,
     deployment_data: DeploymentCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Record deployment of a drive."""

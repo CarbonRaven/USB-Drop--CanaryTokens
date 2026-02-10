@@ -3,6 +3,13 @@
 *.env.local
 secrets/
 
+# Explicit nested env protection
+project-files/.env
+project-files/.env.*
+**/secrets/
+*.pem
+*.key
+
 # OS files
 .DS_Store
 .DS_Store?

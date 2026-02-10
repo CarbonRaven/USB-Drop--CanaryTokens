@@ -69,23 +69,48 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
     return user
 
 
-def generate_api_key() -> tuple[str, str]:
-    """Generate a new API key. Returns (key, hash)."""
+def _extract_key_prefix(key: str) -> str:
+    """Extract the prefix used for O(1) lookup from an API key."""
+    # Key format: usbdrop_<random>; use chars 8-24 as prefix
+    return key[8:24]
+
+
+def generate_api_key() -> tuple[str, str, str]:
+    """Generate a new API key. Returns (key, hash, prefix)."""
     key = f"usbdrop_{secrets.token_urlsafe(32)}"
     key_hash = get_password_hash(key)
-    return key, key_hash
+    key_prefix = _extract_key_prefix(key)
+    return key, key_hash, key_prefix
 
 
 def verify_api_key(db: Session, api_key: str) -> Optional[User]:
     """Verify an API key and return the associated user."""
-    # Get all active API keys and check each
-    api_keys = db.query(APIKey).filter(APIKey.is_active == True).all()
-    for key_record in api_keys:
+    prefix = _extract_key_prefix(api_key)
+
+    # Try O(1) prefix lookup first (for keys created after migration)
+    candidates = db.query(APIKey).filter(
+        APIKey.key_prefix == prefix,
+        APIKey.is_active == True,
+    ).all()
+    for key_record in candidates:
         if verify_password(api_key, key_record.key_hash):
-            # Update last used
             key_record.last_used = datetime.utcnow()
             db.commit()
             return key_record.user
+
+    # Fallback: check legacy keys that have no prefix stored
+    legacy_keys = db.query(APIKey).filter(
+        APIKey.key_prefix.is_(None),
+        APIKey.is_active == True,
+    ).all()
+    for key_record in legacy_keys:
+        if verify_password(api_key, key_record.key_hash):
+            # Backfill the prefix for future lookups
+            key_record.key_prefix = prefix
+            key_record.last_used = datetime.utcnow()
+            db.commit()
+            return key_record.user
+
     return None
 
 

@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.content import GeneratedContent
 from app.models.profile import Profile
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, get_current_operator
 from app.services.content_generator import ContentGenerator
 
 router = APIRouter()
@@ -52,7 +52,7 @@ class TemplateInfo(BaseModel):
 @router.post("/document", response_model=ContentResponse)
 async def generate_document(
     request: DocumentRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Generate a document using AI."""
@@ -73,7 +73,7 @@ async def generate_document(
 @router.post("/image", response_model=ContentResponse)
 async def generate_image(
     request: ImageRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Generate an image using DALL-E."""
@@ -134,7 +134,7 @@ async def list_templates(
 @router.post("/profile/{profile_id}/generate-all")
 async def generate_profile_content(
     profile_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Generate all AI content for a profile's templates."""

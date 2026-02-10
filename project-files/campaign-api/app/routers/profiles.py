@@ -10,7 +10,7 @@ import uuid
 from app.database import get_db
 from app.models.profile import Profile
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, get_current_operator
 
 router = APIRouter()
 
@@ -85,7 +85,7 @@ async def list_profiles(
 @router.post("", response_model=ProfileResponse)
 async def create_profile(
     profile_data: ProfileCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Create a new profile."""
@@ -113,7 +113,7 @@ async def get_profile(
 async def update_profile(
     profile_id: uuid.UUID,
     profile_data: ProfileUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Update a profile."""
@@ -136,7 +136,7 @@ async def update_profile(
 @router.delete("/{profile_id}")
 async def delete_profile(
     profile_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Delete a profile."""

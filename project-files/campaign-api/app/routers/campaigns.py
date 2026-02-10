@@ -10,7 +10,7 @@ import uuid
 from app.database import get_db
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user, get_current_operator
 
 router = APIRouter()
 
@@ -88,7 +88,7 @@ async def list_campaigns(
 @router.post("", response_model=CampaignResponse)
 async def create_campaign(
     campaign_data: CampaignCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Create a new campaign."""
@@ -116,7 +116,7 @@ async def get_campaign(
 async def update_campaign(
     campaign_id: uuid.UUID,
     campaign_data: CampaignUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Update a campaign."""
@@ -136,7 +136,7 @@ async def update_campaign(
 @router.delete("/{campaign_id}")
 async def delete_campaign(
     campaign_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Delete a campaign."""
