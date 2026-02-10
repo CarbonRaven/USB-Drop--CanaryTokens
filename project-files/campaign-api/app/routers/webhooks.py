@@ -29,6 +29,7 @@ async def receive_canary_alert(
     if settings.webhook_secret:
         incoming_secret = request.headers.get("X-Webhook-Secret", "")
         if not hmac.compare_digest(incoming_secret, settings.webhook_secret):
+            logger.warning("Webhook request rejected: invalid secret")
             raise HTTPException(status_code=403, detail="Invalid webhook secret")
     else:
         logger.warning("WEBHOOK_SECRET not configured — webhook endpoint is unauthenticated")

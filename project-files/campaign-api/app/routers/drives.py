@@ -238,7 +238,7 @@ async def prepare_drive(
 @router.get("/{drive_id}/download")
 async def download_drive_zip(
     drive_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_operator),
     db: Session = Depends(get_db)
 ):
     """Download a ZIP file containing all drive files."""
