@@ -34,7 +34,7 @@ Docker Networks:
 | Component | Location | Stack |
 |-----------|----------|-------|
 | Campaign API | `project-files/campaign-api/` | FastAPI, SQLAlchemy, Pydantic |
-| Frontend | `project-files/campaign-frontend/` | Vue 3, Vite, Tailwind, Pinia |
+| Frontend | `project-files/campaign-frontend/` | Vue 3, Vite, PrimeVue 4, Tailwind, Pinia |
 | CLI Tool | `project-files/usb-drop-cli/` | Python, Click, Rich |
 | Landing Pages | `project-files/landing-pages/` | Flask |
 | Docker Config | `project-files/` | Caddy, PostgreSQL, Redis |
@@ -183,9 +183,24 @@ Key variables (see `project-files/.env.example`):
 - `OPENAI_API_KEY` - Content generation (optional)
 - `SLACK_WEBHOOK_URL` - Alert notifications (optional)
 
-## Frontend State Management
+## Frontend
 
-The Vue 3 frontend uses Pinia for state management. The primary store is `src/stores/auth.js` which handles JWT authentication state. Views are located in `src/views/` and correspond to main application routes (Dashboard, Campaigns, Drives, MapView, Alerts, Reports).
+### UI Framework
+
+The frontend uses **PrimeVue 4** with the **Aura dark preset** (Cyan primary, Slate surfaces). Key setup:
+
+- **Theme**: Custom `definePreset(Aura, ...)` with `darkModeSelector: '.app-dark'`
+- **CSS layers**: `tailwind-base, primevue, tailwind-utilities`
+- **Layout**: Collapsible sidebar (w-64/w-16) with PrimeIcons, mobile overlay drawer
+- **Components**: DataTable, Dialog, Select, Tag, Button, ConfirmDialog, Toast, ProgressSpinner, ToggleSwitch, InputText, InputNumber, Textarea
+- **Maps**: Leaflet with CartoDB Dark Matter tiles
+- **Charts**: Chart.js with dark defaults (`color: '#94a3b8'`, `borderColor: '#334155'`)
+- **Notifications**: PrimeVue Toast on all CRUD operations (success/error feedback)
+- **Confirmations**: PrimeVue ConfirmDialog replacing native `confirm()`
+
+### State Management
+
+Pinia for state management. The primary store is `src/stores/auth.js` which handles JWT authentication state. Views are located in `src/views/` and correspond to main application routes (Dashboard, Campaigns, Profiles, Drives, MapView, Alerts, Reports).
 
 ## Content Guidelines
 
