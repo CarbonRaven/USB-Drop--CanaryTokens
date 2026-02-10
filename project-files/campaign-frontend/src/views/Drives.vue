@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { drivesApi, campaignsApi, profilesApi } from '@/services/api'
+import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -11,6 +12,7 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 
 const router = useRouter()
+const toast = useToast()
 const drives = ref([])
 const campaigns = ref([])
 const profiles = ref([])
@@ -78,26 +80,41 @@ const loadProfiles = async () => {
 }
 
 const createDrive = async () => {
-  await drivesApi.create(newDrive.value)
-  showCreateModal.value = false
-  resetForm()
-  await loadDrives()
+  try {
+    await drivesApi.create(newDrive.value)
+    showCreateModal.value = false
+    resetForm()
+    toast.add({ severity: 'success', summary: 'Drive Created', life: 3000 })
+    await loadDrives()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create drive', life: 5000 })
+  }
 }
 
 const prepareDrive = async (id) => {
-  await drivesApi.prepare(id)
-  await loadDrives()
+  try {
+    await drivesApi.prepare(id)
+    toast.add({ severity: 'success', summary: 'Drive Prepared', detail: 'Tokens generated successfully', life: 3000 })
+    await loadDrives()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to prepare drive', life: 5000 })
+  }
 }
 
 const downloadDrive = async (id) => {
-  const response = await drivesApi.download(id)
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `drive-${id}.zip`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  try {
+    const response = await drivesApi.download(id)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `drive-${id}.zip`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    toast.add({ severity: 'success', summary: 'Download Started', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to download drive', life: 5000 })
+  }
 }
 
 const resetForm = () => {

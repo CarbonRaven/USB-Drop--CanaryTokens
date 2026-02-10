@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { reportsApi, campaignsApi } from '@/services/api'
+import { useToast } from 'primevue/usetoast'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -14,6 +15,7 @@ Chart.register(...registerables)
 Chart.defaults.color = '#94a3b8'
 Chart.defaults.borderColor = '#334155'
 
+const toast = useToast()
 const campaigns = ref([])
 const selectedCampaign = ref('')
 const report = ref(null)
@@ -144,14 +146,19 @@ const updateCharts = () => {
 }
 
 const exportCsv = async () => {
-  const response = await reportsApi.exportCsv(selectedCampaign.value)
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `campaign-${selectedCampaign.value}-report.csv`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  try {
+    const response = await reportsApi.exportCsv(selectedCampaign.value)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `campaign-${selectedCampaign.value}-report.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    toast.add({ severity: 'success', summary: 'CSV Exported', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to export CSV', life: 5000 })
+  }
 }
 
 const getCampaignName = (id) => {

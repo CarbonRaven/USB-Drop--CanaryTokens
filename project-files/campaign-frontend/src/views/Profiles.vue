@@ -10,8 +10,10 @@ import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 
 const confirm = useConfirm()
+const toast = useToast()
 
 const profiles = ref([])
 const loading = ref(true)
@@ -62,10 +64,15 @@ const loadProfiles = async () => {
 }
 
 const createProfile = async () => {
-  await profilesApi.create(newProfile.value)
-  showCreateModal.value = false
-  resetForm()
-  await loadProfiles()
+  try {
+    await profilesApi.create(newProfile.value)
+    showCreateModal.value = false
+    resetForm()
+    toast.add({ severity: 'success', summary: 'Profile Created', life: 3000 })
+    await loadProfiles()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create profile', life: 5000 })
+  }
 }
 
 const deleteProfile = (id) => {
@@ -77,8 +84,13 @@ const deleteProfile = (id) => {
     acceptLabel: 'Delete',
     acceptClass: 'p-button-danger',
     accept: async () => {
-      await profilesApi.delete(id)
-      await loadProfiles()
+      try {
+        await profilesApi.delete(id)
+        toast.add({ severity: 'success', summary: 'Profile Deleted', life: 3000 })
+        await loadProfiles()
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete profile', life: 5000 })
+      }
     }
   })
 }

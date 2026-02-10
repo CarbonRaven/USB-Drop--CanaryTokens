@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import Toast from 'primevue/toast'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -53,6 +54,7 @@ const logout = () => {
 
 <template>
   <div class="min-h-screen bg-surface-950">
+    <Toast />
     <template v-if="isAuthenticated">
       <!-- Mobile overlay -->
       <div

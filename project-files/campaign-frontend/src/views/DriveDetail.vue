@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { drivesApi } from '@/services/api'
+import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
@@ -11,6 +12,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const drive = ref(null)
 const tokens = ref([])
@@ -59,24 +61,34 @@ const loadDrive = async () => {
 }
 
 const prepareDrive = async () => {
-  await drivesApi.prepare(drive.value.id)
-  await loadDrive()
+  try {
+    await drivesApi.prepare(drive.value.id)
+    toast.add({ severity: 'success', summary: 'Drive Prepared', detail: 'Tokens generated successfully', life: 3000 })
+    await loadDrive()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to prepare drive', life: 5000 })
+  }
 }
 
 const downloadDrive = async () => {
-  const response = await drivesApi.download(drive.value.id)
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `${drive.value.unique_code}.zip`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  try {
+    const response = await drivesApi.download(drive.value.id)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `${drive.value.unique_code}.zip`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    toast.add({ severity: 'success', summary: 'Download Started', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to download drive', life: 5000 })
+  }
 }
 
 const getCurrentLocation = () => {
   if (!navigator.geolocation) {
-    alert('Geolocation is not supported by your browser')
+    toast.add({ severity: 'warn', summary: 'Unsupported', detail: 'Geolocation is not supported by your browser', life: 5000 })
     return
   }
 
@@ -89,7 +101,7 @@ const getCurrentLocation = () => {
     },
     (error) => {
       console.error('Geolocation error:', error)
-      alert('Failed to get current location')
+      toast.add({ severity: 'error', summary: 'Location Error', detail: 'Failed to get current location', life: 5000 })
       gettingLocation.value = false
     }
   )
@@ -97,7 +109,7 @@ const getCurrentLocation = () => {
 
 const deployDrive = async () => {
   if (!deployment.value.latitude || !deployment.value.longitude) {
-    alert('Please provide location coordinates')
+    toast.add({ severity: 'warn', summary: 'Missing Coordinates', detail: 'Please provide location coordinates', life: 5000 })
     return
   }
 
@@ -105,7 +117,10 @@ const deployDrive = async () => {
   try {
     await drivesApi.deploy(drive.value.id, deployment.value)
     showDeployModal.value = false
+    toast.add({ severity: 'success', summary: 'Deployment Recorded', life: 3000 })
     await loadDrive()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to record deployment', life: 5000 })
   } finally {
     deploying.value = false
   }

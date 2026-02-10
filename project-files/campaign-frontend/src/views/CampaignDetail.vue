@@ -13,10 +13,12 @@ import Tag from 'primevue/tag'
 import ConfirmDialog from 'primevue/confirmdialog'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 
 const route = useRoute()
 const router = useRouter()
 const confirm = useConfirm()
+const toast = useToast()
 
 const campaign = ref(null)
 const drives = ref([])
@@ -77,9 +79,14 @@ const loadCampaign = async () => {
 }
 
 const updateCampaign = async () => {
-  await campaignsApi.update(campaign.value.id, editForm.value)
-  showEditModal.value = false
-  await loadCampaign()
+  try {
+    await campaignsApi.update(campaign.value.id, editForm.value)
+    showEditModal.value = false
+    toast.add({ severity: 'success', summary: 'Campaign Updated', life: 3000 })
+    await loadCampaign()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update campaign', life: 5000 })
+  }
 }
 
 const deleteCampaign = () => {
@@ -91,21 +98,31 @@ const deleteCampaign = () => {
     acceptLabel: 'Delete',
     acceptClass: 'p-button-danger',
     accept: async () => {
-      await campaignsApi.delete(campaign.value.id)
-      router.push('/campaigns')
+      try {
+        await campaignsApi.delete(campaign.value.id)
+        toast.add({ severity: 'success', summary: 'Campaign Deleted', life: 3000 })
+        router.push('/campaigns')
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete campaign', life: 5000 })
+      }
     }
   })
 }
 
 const exportCsv = async () => {
-  const response = await reportsApi.exportCsv(campaign.value.id)
-  const url = window.URL.createObjectURL(new Blob([response.data]))
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', `campaign-${campaign.value.id}-report.csv`)
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  try {
+    const response = await reportsApi.exportCsv(campaign.value.id)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `campaign-${campaign.value.id}-report.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    toast.add({ severity: 'success', summary: 'CSV Exported', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to export CSV', life: 5000 })
+  }
 }
 
 const formatDate = (dateStr) => {

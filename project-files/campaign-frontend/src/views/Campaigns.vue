@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { campaignsApi } from '@/services/api'
+import { useToast } from 'primevue/usetoast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -9,6 +10,7 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 
+const toast = useToast()
 const campaigns = ref([])
 const loading = ref(true)
 const showCreateModal = ref(false)
@@ -29,10 +31,15 @@ const loadCampaigns = async () => {
 }
 
 const createCampaign = async () => {
-  await campaignsApi.create(newCampaign.value)
-  showCreateModal.value = false
-  newCampaign.value = { name: '', client_name: '', description: '' }
-  await loadCampaigns()
+  try {
+    await campaignsApi.create(newCampaign.value)
+    showCreateModal.value = false
+    newCampaign.value = { name: '', client_name: '', description: '' }
+    toast.add({ severity: 'success', summary: 'Campaign Created', life: 3000 })
+    await loadCampaigns()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create campaign', life: 5000 })
+  }
 }
 
 const statusSeverity = {
