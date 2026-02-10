@@ -1,6 +1,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { alertsApi, campaignsApi } from '@/services/api'
+import Button from 'primevue/button'
+import Select from 'primevue/select'
+import Tag from 'primevue/tag'
+import ToggleSwitch from 'primevue/toggleswitch'
 
 const alerts = ref([])
 const campaigns = ref([])
@@ -23,6 +27,8 @@ const hourOptions = [
   { value: 720, label: 'Last 30 days' }
 ]
 
+const campaignFilterOptions = ref([{ label: 'All Campaigns', value: '' }])
+
 onMounted(async () => {
   await Promise.all([loadCampaigns(), loadAlerts()])
   startAutoRefresh()
@@ -34,7 +40,7 @@ onUnmounted(() => {
 
 const startAutoRefresh = () => {
   if (autoRefresh.value) {
-    refreshInterval = setInterval(loadAlerts, 30000) // 30 seconds
+    refreshInterval = setInterval(loadAlerts, 30000)
   }
 }
 
@@ -45,8 +51,7 @@ const stopAutoRefresh = () => {
   }
 }
 
-const toggleAutoRefresh = () => {
-  autoRefresh.value = !autoRefresh.value
+const onAutoRefreshChange = () => {
   if (autoRefresh.value) {
     startAutoRefresh()
   } else {
@@ -57,6 +62,10 @@ const toggleAutoRefresh = () => {
 const loadCampaigns = async () => {
   const response = await campaignsApi.list()
   campaigns.value = response.data
+  campaignFilterOptions.value = [
+    { label: 'All Campaigns', value: '' },
+    ...campaigns.value.map(c => ({ label: c.name, value: c.id }))
+  ]
 }
 
 const loadAlerts = async () => {
@@ -93,151 +102,120 @@ const formatTime = (dateStr) => {
   return date.toLocaleString()
 }
 
-const getTokenTypeColor = (type) => {
-  const colors = {
-    dns: 'bg-purple-100 text-purple-800',
-    word: 'bg-blue-100 text-blue-800',
-    excel: 'bg-green-100 text-green-800',
-    pdf: 'bg-red-100 text-red-800',
-    folder: 'bg-yellow-100 text-yellow-800',
-    qr: 'bg-gray-100 text-gray-800'
+const getTokenTypeSeverity = (type) => {
+  const severities = {
+    dns: 'secondary',
+    word: 'info',
+    excel: 'success',
+    pdf: 'danger',
+    folder: 'warn',
+    qr: 'secondary'
   }
-  return colors[type] || 'bg-gray-100 text-gray-800'
+  return severities[type] || 'secondary'
 }
 </script>
 
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Alerts</h1>
-      <div class="flex items-center space-x-4">
-        <button
-          @click="toggleAutoRefresh"
-          :class="[
-            'flex items-center px-3 py-1 text-sm rounded-full',
-            autoRefresh ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-          ]"
-        >
-          <span :class="['w-2 h-2 rounded-full mr-2', autoRefresh ? 'bg-green-500 animate-pulse' : 'bg-gray-400']"></span>
-          {{ autoRefresh ? 'Live' : 'Paused' }}
-        </button>
-        <button @click="loadAlerts" class="text-primary-600 hover:text-primary-700">
-          Refresh
-        </button>
+      <h1 class="text-2xl font-bold text-surface-0">Alerts</h1>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <ToggleSwitch v-model="autoRefresh" @update:modelValue="onAutoRefreshChange" />
+          <span class="text-sm" :class="autoRefresh ? 'text-green-400' : 'text-surface-400'">
+            {{ autoRefresh ? 'Live' : 'Paused' }}
+          </span>
+          <span v-if="autoRefresh" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        </div>
+        <Button label="Refresh" icon="pi pi-refresh" text @click="loadAlerts" />
       </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">Total Triggers</div>
-        <div class="text-2xl font-bold text-red-600">{{ stats?.total || 0 }}</div>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">Total Triggers</div>
+        <div class="text-2xl font-bold text-red-400">{{ stats?.total || 0 }}</div>
       </div>
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">Today</div>
-        <div class="text-2xl font-bold">{{ stats?.today || 0 }}</div>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">Today</div>
+        <div class="text-2xl font-bold text-surface-0">{{ stats?.today || 0 }}</div>
       </div>
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">This Week</div>
-        <div class="text-2xl font-bold">{{ stats?.this_week || 0 }}</div>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">This Week</div>
+        <div class="text-2xl font-bold text-surface-0">{{ stats?.this_week || 0 }}</div>
       </div>
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">Unique IPs</div>
-        <div class="text-2xl font-bold">{{ stats?.unique_ips || 0 }}</div>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">Unique IPs</div>
+        <div class="text-2xl font-bold text-surface-0">{{ stats?.unique_ips || 0 }}</div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white shadow rounded-lg p-4 mb-6">
+    <div class="bg-surface-900 border border-surface-700 rounded-lg p-4 mb-6">
       <div class="flex flex-wrap gap-4 items-end">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
-          <select v-model="filters.campaign_id"
-            class="px-3 py-2 border border-gray-300 rounded-md">
-            <option value="">All Campaigns</option>
-            <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Campaign</label>
+          <Select v-model="filters.campaign_id" :options="campaignFilterOptions"
+            optionLabel="label" optionValue="value" class="w-48" />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Time Range</label>
-          <select v-model="filters.hours"
-            class="px-3 py-2 border border-gray-300 rounded-md">
-            <option v-for="opt in hourOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Time Range</label>
+          <Select v-model="filters.hours" :options="hourOptions"
+            optionLabel="label" optionValue="value" class="w-40" />
         </div>
 
-        <button @click="applyFilters"
-          class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
-          Apply
-        </button>
+        <Button label="Apply" icon="pi pi-filter" @click="applyFilters" />
       </div>
     </div>
 
     <!-- Alerts List -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="divide-y divide-gray-200">
+    <div class="bg-surface-900 border border-surface-700 rounded-lg overflow-hidden">
+      <div class="divide-y divide-surface-700">
         <div
           v-for="alert in alerts"
           :key="alert.id"
-          class="p-4 hover:bg-gray-50 transition-colors"
+          class="p-4 hover:bg-surface-800 transition-colors"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center space-x-3">
                 <router-link :to="`/drives/${alert.drive_id}`"
-                  class="font-mono font-medium text-primary-600 hover:underline">
+                  class="font-mono font-medium text-primary-400 hover:underline">
                   {{ alert.drive_code }}
                 </router-link>
-                <span :class="[getTokenTypeColor(alert.token_type), 'px-2 py-0.5 text-xs rounded-full']">
-                  {{ alert.token_type }}
-                </span>
-                <span v-if="alert.token_filename" class="text-sm text-gray-500">
+                <Tag :value="alert.token_type" :severity="getTokenTypeSeverity(alert.token_type)" />
+                <span v-if="alert.token_filename" class="text-sm text-surface-400">
                   {{ alert.token_filename }}
                 </span>
               </div>
 
-              <div class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
+              <div class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-surface-300">
                 <div class="flex items-center">
-                  <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
+                  <i class="pi pi-globe mr-2 text-surface-400"></i>
                   {{ alert.source_ip || 'Unknown IP' }}
                 </div>
                 <div v-if="alert.geo_city || alert.geo_country" class="flex items-center">
-                  <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  <i class="pi pi-map-marker mr-2 text-surface-400"></i>
                   {{ alert.geo_city }}{{ alert.geo_city && alert.geo_country ? ', ' : '' }}{{ alert.geo_country }}
                 </div>
                 <div v-if="alert.user_agent" class="flex items-center max-w-xs truncate" :title="alert.user_agent">
-                  <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <i class="pi pi-desktop mr-2 text-surface-400"></i>
                   <span class="truncate">{{ alert.user_agent }}</span>
                 </div>
               </div>
             </div>
 
             <div class="text-right ml-4">
-              <div class="text-sm font-medium text-gray-900">{{ formatTime(alert.triggered_at) }}</div>
-              <div class="text-xs text-gray-500">{{ new Date(alert.triggered_at).toLocaleString() }}</div>
+              <div class="text-sm font-medium text-surface-0">{{ formatTime(alert.triggered_at) }}</div>
+              <div class="text-xs text-surface-400">{{ new Date(alert.triggered_at).toLocaleString() }}</div>
             </div>
           </div>
         </div>
 
-        <div v-if="alerts.length === 0" class="p-8 text-center text-gray-500">
-          <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
+        <div v-if="alerts.length === 0" class="p-8 text-center text-surface-400">
+          <i class="pi pi-bell text-4xl text-surface-600 mb-4 block"></i>
           <p>No alerts in the selected time range</p>
         </div>
       </div>

@@ -1,7 +1,13 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { drivesApi } from '@/services/api'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import Tag from 'primevue/tag'
+import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,12 +26,12 @@ const deployment = ref({
   deployed_by: ''
 })
 
-const statusColors = {
-  created: 'bg-gray-100 text-gray-800',
-  prepared: 'bg-blue-100 text-blue-800',
-  deployed: 'bg-green-100 text-green-800',
-  triggered: 'bg-red-100 text-red-800',
-  recovered: 'bg-yellow-100 text-yellow-800'
+const driveStatusSeverity = {
+  created: 'secondary',
+  prepared: 'info',
+  deployed: 'success',
+  triggered: 'danger',
+  recovered: 'warn',
 }
 
 onMounted(async () => {
@@ -122,194 +128,163 @@ const formatDate = (dateStr) => {
 
 <template>
   <div>
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+    <div v-if="loading" class="flex justify-center py-12">
+      <ProgressSpinner />
     </div>
 
     <div v-else-if="drive">
       <!-- Header -->
       <div class="mb-6">
         <div class="flex items-center space-x-4">
-          <router-link to="/drives" class="text-gray-500 hover:text-gray-700">
+          <router-link to="/drives" class="text-surface-400 hover:text-surface-200">
             &larr; Back to Drives
           </router-link>
         </div>
         <div class="mt-4 flex justify-between items-start">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ drive.unique_code }}</h1>
-            <p v-if="drive.label" class="mt-1 text-gray-500">{{ drive.label }}</p>
+            <h1 class="text-2xl font-bold text-surface-0 font-mono">{{ drive.unique_code }}</h1>
+            <p v-if="drive.label" class="mt-1 text-surface-400">{{ drive.label }}</p>
           </div>
-          <span :class="[statusColors[drive.status], 'px-3 py-1 text-sm rounded-full']">
-            {{ drive.status }}
-          </span>
+          <Tag :value="drive.status" :severity="driveStatusSeverity[drive.status]" class="text-sm" />
         </div>
       </div>
 
       <!-- Action Buttons -->
-      <div class="mb-6 flex space-x-4">
-        <button
-          v-if="drive.status === 'created'"
-          @click="prepareDrive"
-          class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-        >
-          Prepare Drive
-        </button>
-        <button
-          v-if="drive.status === 'prepared'"
-          @click="downloadDrive"
-          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-        >
-          Download ZIP
-        </button>
-        <button
-          v-if="drive.status === 'prepared'"
-          @click="showDeployModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          Record Deployment
-        </button>
+      <div class="mb-6 flex gap-3">
+        <Button v-if="drive.status === 'created'" label="Prepare Drive" icon="pi pi-cog"
+          @click="prepareDrive" />
+        <Button v-if="drive.status === 'prepared'" label="Download ZIP" icon="pi pi-download"
+          severity="success" @click="downloadDrive" />
+        <Button v-if="drive.status === 'prepared'" label="Record Deployment" icon="pi pi-map-marker"
+          severity="info" @click="showDeployModal = true" />
       </div>
 
       <!-- Drive Info -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-medium mb-4">Drive Information</h2>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-6">
+          <h2 class="text-lg font-medium text-surface-0 mb-4">Drive Information</h2>
           <dl class="space-y-3">
             <div class="flex justify-between">
-              <dt class="text-gray-500">Unique Code</dt>
-              <dd class="font-mono">{{ drive.unique_code }}</dd>
+              <dt class="text-surface-400">Unique Code</dt>
+              <dd class="font-mono text-surface-200">{{ drive.unique_code }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-gray-500">Status</dt>
-              <dd>{{ drive.status }}</dd>
+              <dt class="text-surface-400">Status</dt>
+              <dd class="text-surface-200">{{ drive.status }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-gray-500">Created</dt>
-              <dd>{{ formatDate(drive.created_at) }}</dd>
+              <dt class="text-surface-400">Created</dt>
+              <dd class="text-surface-200">{{ formatDate(drive.created_at) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-gray-500">Prepared</dt>
-              <dd>{{ formatDate(drive.prepared_at) }}</dd>
+              <dt class="text-surface-400">Prepared</dt>
+              <dd class="text-surface-200">{{ formatDate(drive.prepared_at) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-gray-500">Deployed</dt>
-              <dd>{{ formatDate(drive.deployed_at) }}</dd>
+              <dt class="text-surface-400">Deployed</dt>
+              <dd class="text-surface-200">{{ formatDate(drive.deployed_at) }}</dd>
             </div>
           </dl>
         </div>
 
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-medium mb-4">Deployment Details</h2>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-6">
+          <h2 class="text-lg font-medium text-surface-0 mb-4">Deployment Details</h2>
           <div v-if="drive.deployment">
             <dl class="space-y-3">
               <div class="flex justify-between">
-                <dt class="text-gray-500">Location</dt>
-                <dd>{{ drive.deployment.location_description || 'Not specified' }}</dd>
+                <dt class="text-surface-400">Location</dt>
+                <dd class="text-surface-200">{{ drive.deployment.location_description || 'Not specified' }}</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Coordinates</dt>
-                <dd class="font-mono text-sm">
+                <dt class="text-surface-400">Coordinates</dt>
+                <dd class="font-mono text-sm text-surface-200">
                   {{ drive.deployment.latitude?.toFixed(6) }}, {{ drive.deployment.longitude?.toFixed(6) }}
                 </dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Deployed By</dt>
-                <dd>{{ drive.deployment.deployed_by || '-' }}</dd>
+                <dt class="text-surface-400">Deployed By</dt>
+                <dd class="text-surface-200">{{ drive.deployment.deployed_by || '-' }}</dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Deployed At</dt>
-                <dd>{{ formatDate(drive.deployment.deployed_at) }}</dd>
+                <dt class="text-surface-400">Deployed At</dt>
+                <dd class="text-surface-200">{{ formatDate(drive.deployment.deployed_at) }}</dd>
               </div>
             </dl>
           </div>
-          <div v-else class="text-gray-500">
+          <div v-else class="text-surface-400">
             Not yet deployed
           </div>
         </div>
       </div>
 
       <!-- Tokens -->
-      <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b">
-          <h2 class="text-lg font-medium">Tokens ({{ tokens.length }})</h2>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg">
+        <div class="px-6 py-4 border-b border-surface-700">
+          <h2 class="text-lg font-medium text-surface-0">Tokens ({{ tokens.length }})</h2>
         </div>
-        <div class="divide-y">
+        <div class="divide-y divide-surface-700">
           <div v-for="token in tokens" :key="token.id" class="px-6 py-4">
             <div class="flex justify-between items-start">
               <div>
                 <div class="flex items-center space-x-2">
-                  <span class="px-2 py-1 text-xs bg-primary-100 text-primary-800 rounded">
-                    {{ tokenTypeLabels[token.token_type] || token.token_type }}
-                  </span>
-                  <span class="font-medium">{{ token.filename || 'DNS Token' }}</span>
+                  <Tag :value="tokenTypeLabels[token.token_type] || token.token_type" severity="info" />
+                  <span class="font-medium text-surface-0">{{ token.filename || 'DNS Token' }}</span>
                 </div>
-                <div class="mt-1 text-sm text-gray-500">
+                <div class="mt-1 text-sm text-surface-400">
                   {{ token.memo || 'No description' }}
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-sm text-gray-500">
+                <div class="text-sm text-surface-400">
                   {{ token.trigger_count || 0 }} triggers
                 </div>
               </div>
             </div>
           </div>
-          <div v-if="tokens.length === 0" class="px-6 py-8 text-center text-gray-500">
+          <div v-if="tokens.length === 0" class="px-6 py-8 text-center text-surface-400">
             No tokens created yet. Prepare the drive to generate tokens.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Deploy Modal -->
-    <div v-if="showDeployModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 class="text-lg font-medium mb-4">Record Deployment</h2>
-        <form @submit.prevent="deployDrive" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Location</label>
-            <div class="mt-1 flex space-x-2">
-              <input v-model.number="deployment.latitude" type="number" step="any"
-                placeholder="Latitude" required
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md" />
-              <input v-model.number="deployment.longitude" type="number" step="any"
-                placeholder="Longitude" required
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md" />
-            </div>
-            <button
-              type="button"
-              @click="getCurrentLocation"
-              :disabled="gettingLocation"
-              class="mt-2 text-sm text-primary-600 hover:text-primary-700"
-            >
-              {{ gettingLocation ? 'Getting location...' : 'Use current location' }}
-            </button>
+    <!-- Deploy Dialog -->
+    <Dialog v-model:visible="showDeployModal" header="Record Deployment" modal :style="{ width: '28rem' }">
+      <form @submit.prevent="deployDrive" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Location</label>
+          <div class="flex gap-2">
+            <InputNumber v-model="deployment.latitude" placeholder="Latitude" :minFractionDigits="1" :maxFractionDigits="6"
+              mode="decimal" class="flex-1" />
+            <InputNumber v-model="deployment.longitude" placeholder="Longitude" :minFractionDigits="1" :maxFractionDigits="6"
+              mode="decimal" class="flex-1" />
           </div>
+          <Button
+            type="button"
+            :label="gettingLocation ? 'Getting location...' : 'Use current location'"
+            text size="small"
+            :loading="gettingLocation"
+            @click="getCurrentLocation"
+            class="mt-2"
+          />
+        </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Description</label>
-            <input v-model="deployment.location_description" type="text"
-              placeholder="e.g., Building A lobby, near elevators"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
-          </div>
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Description</label>
+          <InputText v-model="deployment.location_description"
+            placeholder="e.g., Building A lobby, near elevators" class="w-full" />
+        </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Deployed By</label>
-            <input v-model="deployment.deployed_by" type="text"
-              placeholder="Your name"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
-          </div>
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Deployed By</label>
+          <InputText v-model="deployment.deployed_by" placeholder="Your name" class="w-full" />
+        </div>
 
-          <div class="flex justify-end space-x-3 pt-4">
-            <button type="button" @click="showDeployModal = false"
-              class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Cancel</button>
-            <button type="submit" :disabled="deploying"
-              class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50">
-              {{ deploying ? 'Recording...' : 'Record Deployment' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <Button label="Cancel" severity="secondary" text @click="showDeployModal = false" />
+          <Button type="submit" :label="deploying ? 'Recording...' : 'Record Deployment'" :loading="deploying" />
+        </div>
+      </form>
+    </Dialog>
   </div>
 </template>

@@ -2,8 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { reportsApi, campaignsApi } from '@/services/api'
+import Select from 'primevue/select'
+import Button from 'primevue/button'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import ProgressSpinner from 'primevue/progressspinner'
 
 Chart.register(...registerables)
+
+// Set dark defaults for Chart.js
+Chart.defaults.color = '#94a3b8'
+Chart.defaults.borderColor = '#334155'
 
 const campaigns = ref([])
 const selectedCampaign = ref('')
@@ -15,6 +24,8 @@ const triggerChart = ref(null)
 let statusChartInstance = null
 let triggerChartInstance = null
 
+const campaignOptions = ref([])
+
 onMounted(async () => {
   await loadCampaigns()
 })
@@ -24,6 +35,10 @@ const loadCampaigns = async () => {
   try {
     const response = await campaignsApi.list()
     campaigns.value = response.data
+    campaignOptions.value = campaigns.value.map(c => ({
+      label: `${c.name} (${c.status})`,
+      value: c.id
+    }))
     if (campaigns.value.length > 0) {
       selectedCampaign.value = campaigns.value[0].id
       await loadReport()
@@ -57,11 +72,11 @@ const updateCharts = () => {
         datasets: [{
           data: Object.values(report.value.status_distribution),
           backgroundColor: [
-            '#9CA3AF', // created - gray
-            '#3B82F6', // prepared - blue
-            '#10B981', // deployed - green
-            '#EF4444', // triggered - red
-            '#F59E0B'  // recovered - yellow
+            '#64748b', // created - slate
+            '#38bdf8', // prepared - sky
+            '#22c55e', // deployed - green
+            '#ef4444', // triggered - red
+            '#f59e0b'  // recovered - amber
           ]
         }]
       },
@@ -69,7 +84,10 @@ const updateCharts = () => {
         responsive: true,
         plugins: {
           legend: {
-            position: 'bottom'
+            position: 'bottom',
+            labels: {
+              color: '#94a3b8'
+            }
           }
         }
       }
@@ -87,7 +105,7 @@ const updateCharts = () => {
         datasets: [{
           label: 'Triggers',
           data: days.map(d => report.value.triggers_by_day[d]),
-          borderColor: '#EF4444',
+          borderColor: '#ef4444',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
           fill: true,
           tension: 0.3
@@ -104,7 +122,19 @@ const updateCharts = () => {
           y: {
             beginAtZero: true,
             ticks: {
-              stepSize: 1
+              stepSize: 1,
+              color: '#94a3b8'
+            },
+            grid: {
+              color: '#334155'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#94a3b8'
+            },
+            grid: {
+              color: '#334155'
             }
           }
         }
@@ -132,57 +162,52 @@ const getCampaignName = (id) => {
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Reports</h1>
-      <button
+      <h1 class="text-2xl font-bold text-surface-0">Reports</h1>
+      <Button
         v-if="selectedCampaign"
+        label="Export CSV"
+        icon="pi pi-download"
         @click="exportCsv"
-        class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-      >
-        Export CSV
-      </button>
+      />
     </div>
 
     <!-- Campaign Selector -->
-    <div class="bg-white shadow rounded-lg p-4 mb-6">
+    <div class="bg-surface-900 border border-surface-700 rounded-lg p-4 mb-6">
       <div class="flex items-end gap-4">
         <div class="flex-1">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Select Campaign</label>
-          <select v-model="selectedCampaign" @change="loadReport"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md">
-            <option v-for="c in campaigns" :key="c.id" :value="c.id">
-              {{ c.name }} ({{ c.status }})
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Select Campaign</label>
+          <Select v-model="selectedCampaign" :options="campaignOptions" @change="loadReport"
+            optionLabel="label" optionValue="value" class="w-full" />
         </div>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+    <div v-if="loading" class="flex justify-center py-12">
+      <ProgressSpinner />
     </div>
 
     <div v-else-if="report">
       <!-- Summary Stats -->
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div class="bg-white shadow rounded-lg p-4">
-          <div class="text-sm text-gray-500">Total Drives</div>
-          <div class="text-2xl font-bold">{{ report.total_drives }}</div>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+          <div class="text-sm text-surface-400">Total Drives</div>
+          <div class="text-2xl font-bold text-surface-0">{{ report.total_drives }}</div>
         </div>
-        <div class="bg-white shadow rounded-lg p-4">
-          <div class="text-sm text-gray-500">Deployed</div>
-          <div class="text-2xl font-bold text-green-600">{{ report.deployed }}</div>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+          <div class="text-sm text-surface-400">Deployed</div>
+          <div class="text-2xl font-bold text-green-400">{{ report.deployed }}</div>
         </div>
-        <div class="bg-white shadow rounded-lg p-4">
-          <div class="text-sm text-gray-500">Triggered</div>
-          <div class="text-2xl font-bold text-red-600">{{ report.triggered }}</div>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+          <div class="text-sm text-surface-400">Triggered</div>
+          <div class="text-2xl font-bold text-red-400">{{ report.triggered }}</div>
         </div>
-        <div class="bg-white shadow rounded-lg p-4">
-          <div class="text-sm text-gray-500">Total Triggers</div>
-          <div class="text-2xl font-bold">{{ report.total_triggers }}</div>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+          <div class="text-sm text-surface-400">Total Triggers</div>
+          <div class="text-2xl font-bold text-surface-0">{{ report.total_triggers }}</div>
         </div>
-        <div class="bg-white shadow rounded-lg p-4">
-          <div class="text-sm text-gray-500">Success Rate</div>
-          <div class="text-2xl font-bold">
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+          <div class="text-sm text-surface-400">Success Rate</div>
+          <div class="text-2xl font-bold text-surface-0">
             {{ report.deployed ? Math.round((report.triggered / report.deployed) * 100) : 0 }}%
           </div>
         </div>
@@ -190,75 +215,76 @@ const getCampaignName = (id) => {
 
       <!-- Charts -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-medium mb-4">Drive Status Distribution</h2>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-6">
+          <h2 class="text-lg font-medium text-surface-0 mb-4">Drive Status Distribution</h2>
           <div class="aspect-square max-w-xs mx-auto">
             <canvas ref="statusChart"></canvas>
           </div>
         </div>
 
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-medium mb-4">Triggers Over Time</h2>
+        <div class="bg-surface-900 border border-surface-700 rounded-lg p-6">
+          <h2 class="text-lg font-medium text-surface-0 mb-4">Triggers Over Time</h2>
           <canvas ref="triggerChart"></canvas>
         </div>
       </div>
 
       <!-- Token Type Breakdown -->
-      <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 class="text-lg font-medium mb-4">Triggers by Token Type</h2>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-medium text-surface-0 mb-4">Triggers by Token Type</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div v-for="(count, type) in report.triggers_by_type" :key="type"
-            class="text-center p-4 bg-gray-50 rounded-lg">
-            <div class="text-2xl font-bold text-primary-600">{{ count }}</div>
-            <div class="text-sm text-gray-500 capitalize">{{ type }}</div>
+            class="text-center p-4 bg-surface-800 border border-surface-700 rounded-lg">
+            <div class="text-2xl font-bold text-primary-400">{{ count }}</div>
+            <div class="text-sm text-surface-400 capitalize">{{ type }}</div>
           </div>
         </div>
         <div v-if="Object.keys(report.triggers_by_type || {}).length === 0"
-          class="text-center text-gray-500 py-4">
+          class="text-center text-surface-400 py-4">
           No triggers recorded yet
         </div>
       </div>
 
       <!-- Top Triggered Drives -->
-      <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b">
-          <h2 class="text-lg font-medium">Top Triggered Drives</h2>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-surface-700">
+          <h2 class="text-lg font-medium text-surface-0">Top Triggered Drives</h2>
         </div>
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Label</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Triggers</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">First Trigger</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="drive in report.top_drives" :key="drive.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4">
-                <router-link :to="`/drives/${drive.id}`" class="text-primary-600 hover:underline font-mono">
-                  {{ drive.unique_code }}
-                </router-link>
-              </td>
-              <td class="px-6 py-4 text-gray-500">{{ drive.label || '-' }}</td>
-              <td class="px-6 py-4 text-gray-500">{{ drive.location || '-' }}</td>
-              <td class="px-6 py-4 font-medium text-red-600">{{ drive.trigger_count }}</td>
-              <td class="px-6 py-4 text-gray-500">
-                {{ drive.first_trigger ? new Date(drive.first_trigger).toLocaleString() : '-' }}
-              </td>
-            </tr>
-            <tr v-if="!report.top_drives?.length">
-              <td colspan="5" class="px-6 py-8 text-center text-gray-500">
-                No triggered drives yet
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable :value="report.top_drives || []" :rowHover="true"
+          emptyMessage="No triggered drives yet">
+          <Column field="unique_code" header="Code">
+            <template #body="{ data }">
+              <router-link :to="`/drives/${data.id}`" class="text-primary-400 hover:underline font-mono">
+                {{ data.unique_code }}
+              </router-link>
+            </template>
+          </Column>
+          <Column field="label" header="Label">
+            <template #body="{ data }">
+              <span class="text-surface-300">{{ data.label || '-' }}</span>
+            </template>
+          </Column>
+          <Column field="location" header="Location">
+            <template #body="{ data }">
+              <span class="text-surface-300">{{ data.location || '-' }}</span>
+            </template>
+          </Column>
+          <Column field="trigger_count" header="Triggers">
+            <template #body="{ data }">
+              <span class="font-medium text-red-400">{{ data.trigger_count }}</span>
+            </template>
+          </Column>
+          <Column field="first_trigger" header="First Trigger">
+            <template #body="{ data }">
+              <span class="text-surface-300">
+                {{ data.first_trigger ? new Date(data.first_trigger).toLocaleString() : '-' }}
+              </span>
+            </template>
+          </Column>
+        </DataTable>
       </div>
     </div>
 
-    <div v-else class="text-center py-12 text-gray-500">
+    <div v-else class="text-center py-12 text-surface-400">
       <p>Select a campaign to view its report</p>
     </div>
   </div>

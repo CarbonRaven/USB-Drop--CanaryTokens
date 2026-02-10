@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { alertsApi, campaignsApi } from '@/services/api'
+import Select from 'primevue/select'
+import ProgressSpinner from 'primevue/progressspinner'
 
 const route = useRoute()
 const mapContainer = ref(null)
@@ -14,8 +16,14 @@ const loading = ref(true)
 
 const filters = ref({
   campaign_id: route.query.campaign_id || '',
-  type: 'both' // 'deployments', 'triggers', 'both'
+  type: 'both'
 })
+
+const typeOptions = [
+  { label: 'Deployments & Triggers', value: 'both' },
+  { label: 'Deployments Only', value: 'deployments' },
+  { label: 'Triggers Only', value: 'triggers' },
+]
 
 // Fix for default marker icons in Leaflet with bundlers
 const defaultIcon = L.icon({
@@ -48,6 +56,8 @@ const triggerIcon = L.icon({
 
 L.Marker.prototype.options.icon = defaultIcon
 
+const campaignFilterOptions = ref([{ label: 'All Campaigns', value: '' }])
+
 onMounted(async () => {
   await loadCampaigns()
   initMap()
@@ -61,14 +71,18 @@ watch(filters, async () => {
 const initMap = () => {
   map.value = L.map(mapContainer.value).setView([39.8283, -98.5795], 4)
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
   }).addTo(map.value)
 }
 
 const loadCampaigns = async () => {
   const response = await campaignsApi.list()
   campaigns.value = response.data
+  campaignFilterOptions.value = [
+    { label: 'All Campaigns', value: '' },
+    ...campaigns.value.map(c => ({ label: c.name, value: c.id }))
+  ]
 }
 
 const loadMapData = async () => {
@@ -105,9 +119,9 @@ const updateMarkers = () => {
           .addTo(map.value)
           .bindPopup(`
             <div class="text-sm">
-              <div class="font-bold">Deployed: ${d.drive_code}</div>
-              <div>${d.location_description || 'No description'}</div>
-              <div class="text-gray-500">${new Date(d.deployed_at).toLocaleString()}</div>
+              <div class="font-bold text-cyan-400">Deployed: ${d.drive_code}</div>
+              <div class="text-slate-300">${d.location_description || 'No description'}</div>
+              <div class="text-slate-400">${new Date(d.deployed_at).toLocaleString()}</div>
             </div>
           `)
         bounds.push([d.latitude, d.longitude])
@@ -123,11 +137,11 @@ const updateMarkers = () => {
           .addTo(map.value)
           .bindPopup(`
             <div class="text-sm">
-              <div class="font-bold text-red-600">Triggered: ${t.drive_code}</div>
-              <div>${t.token_type} - ${t.filename || 'DNS'}</div>
-              <div>${t.geo_city || ''}${t.geo_city && t.geo_country ? ', ' : ''}${t.geo_country || ''}</div>
-              <div class="text-gray-500">IP: ${t.source_ip || 'Unknown'}</div>
-              <div class="text-gray-500">${new Date(t.triggered_at).toLocaleString()}</div>
+              <div class="font-bold text-red-400">Triggered: ${t.drive_code}</div>
+              <div class="text-slate-300">${t.token_type} - ${t.filename || 'DNS'}</div>
+              <div class="text-slate-300">${t.geo_city || ''}${t.geo_city && t.geo_country ? ', ' : ''}${t.geo_country || ''}</div>
+              <div class="text-slate-400">IP: ${t.source_ip || 'Unknown'}</div>
+              <div class="text-slate-400">${new Date(t.triggered_at).toLocaleString()}</div>
             </div>
           `)
         bounds.push([t.geo_latitude, t.geo_longitude])
@@ -145,63 +159,56 @@ const updateMarkers = () => {
 <template>
   <div class="h-full flex flex-col">
     <div class="flex justify-between items-center mb-4">
-      <h1 class="text-2xl font-bold text-gray-900">Map View</h1>
+      <h1 class="text-2xl font-bold text-surface-0">Map View</h1>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white shadow rounded-lg p-4 mb-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-lg p-4 mb-4">
       <div class="flex flex-wrap gap-4 items-end">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
-          <select v-model="filters.campaign_id"
-            class="px-3 py-2 border border-gray-300 rounded-md">
-            <option value="">All Campaigns</option>
-            <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Campaign</label>
+          <Select v-model="filters.campaign_id" :options="campaignFilterOptions"
+            optionLabel="label" optionValue="value" class="w-48" />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Show</label>
-          <select v-model="filters.type"
-            class="px-3 py-2 border border-gray-300 rounded-md">
-            <option value="both">Deployments & Triggers</option>
-            <option value="deployments">Deployments Only</option>
-            <option value="triggers">Triggers Only</option>
-          </select>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Show</label>
+          <Select v-model="filters.type" :options="typeOptions"
+            optionLabel="label" optionValue="value" class="w-56" />
         </div>
 
         <div class="flex items-center space-x-4 text-sm">
           <div class="flex items-center">
             <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-            <span>Deployment</span>
+            <span class="text-surface-300">Deployment</span>
           </div>
           <div class="flex items-center">
             <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-            <span>Trigger</span>
+            <span class="text-surface-300">Trigger</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Map -->
-    <div class="flex-1 bg-white shadow rounded-lg overflow-hidden relative">
-      <div v-if="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+    <div class="flex-1 bg-surface-900 border border-surface-700 rounded-lg overflow-hidden relative">
+      <div v-if="loading" class="absolute inset-0 bg-surface-900/75 flex items-center justify-center z-10">
+        <ProgressSpinner />
       </div>
       <div ref="mapContainer" class="h-full min-h-[500px]"></div>
     </div>
 
     <!-- Stats -->
     <div class="mt-4 grid grid-cols-2 gap-4">
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">Deployments Shown</div>
-        <div class="text-xl font-bold text-blue-600">
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">Deployments Shown</div>
+        <div class="text-xl font-bold text-blue-400">
           {{ mapData.deployments?.length || 0 }}
         </div>
       </div>
-      <div class="bg-white shadow rounded-lg p-4">
-        <div class="text-sm text-gray-500">Triggers Shown</div>
-        <div class="text-xl font-bold text-red-600">
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-4">
+        <div class="text-sm text-surface-400">Triggers Shown</div>
+        <div class="text-xl font-bold text-red-400">
           {{ mapData.triggers?.length || 0 }}
         </div>
       </div>

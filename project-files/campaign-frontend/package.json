@@ -10,11 +10,15 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@primeuix/themes": "^2.0.3",
     "@vueuse/core": "^10.7.2",
     "axios": "^1.6.7",
     "chart.js": "^4.4.1",
     "leaflet": "^1.9.4",
     "pinia": "^2.1.7",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.5.4",
+    "tailwindcss-primeui": "^0.6.1",
     "vue": "^3.4.15",
     "vue-chartjs": "^5.3.0",
     "vue-router": "^4.2.5"

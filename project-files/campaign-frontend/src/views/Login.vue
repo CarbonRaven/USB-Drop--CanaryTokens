@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import Message from 'primevue/message'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -27,54 +30,55 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen flex items-center justify-center bg-surface-950 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <div>
-        <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
+        <h2 class="mt-6 text-center text-3xl font-bold text-surface-0">
           USB Drop Campaign Manager
         </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
+        <p class="mt-2 text-center text-sm text-surface-400">
           Sign in to manage your campaigns
         </p>
       </div>
 
-      <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
-        <div v-if="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-          {{ error }}
-        </div>
+      <div class="bg-surface-900 border border-surface-700 rounded-lg p-8">
+        <form class="space-y-6" @submit.prevent="handleLogin">
+          <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
-        <div class="space-y-4">
-          <div>
-            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-            <input
-              id="username"
-              v-model="username"
-              type="text"
-              required
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            />
+          <div class="space-y-4">
+            <div>
+              <label for="username" class="block text-sm font-medium text-surface-300 mb-1">Username</label>
+              <InputText
+                id="username"
+                v-model="username"
+                type="text"
+                required
+                class="w-full"
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div>
+              <label for="password" class="block text-sm font-medium text-surface-300 mb-1">Password</label>
+              <InputText
+                id="password"
+                v-model="password"
+                type="password"
+                required
+                class="w-full"
+                placeholder="Enter password"
+              />
+            </div>
           </div>
 
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              required
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-        >
-          {{ loading ? 'Signing in...' : 'Sign in' }}
-        </button>
-      </form>
+          <Button
+            type="submit"
+            label="Sign in"
+            :loading="loading"
+            class="w-full"
+          />
+        </form>
+      </div>
     </div>
   </div>
 </template>

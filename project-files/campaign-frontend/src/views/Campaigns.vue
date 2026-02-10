@@ -1,6 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { campaignsApi } from '@/services/api'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
+import Tag from 'primevue/tag'
 
 const campaigns = ref([])
 const loading = ref(true)
@@ -28,92 +35,82 @@ const createCampaign = async () => {
   await loadCampaigns()
 }
 
-const statusColors = {
-  draft: 'bg-gray-100 text-gray-800',
-  active: 'bg-green-100 text-green-800',
-  completed: 'bg-blue-100 text-blue-800',
-  archived: 'bg-yellow-100 text-yellow-800',
+const statusSeverity = {
+  draft: 'secondary',
+  active: 'success',
+  completed: 'info',
+  archived: 'warn',
 }
 </script>
 
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Campaigns</h1>
-      <button
-        @click="showCreateModal = true"
-        class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-      >
-        New Campaign
-      </button>
+      <h1 class="text-2xl font-bold text-surface-0">Campaigns</h1>
+      <Button label="New Campaign" icon="pi pi-plus" @click="showCreateModal = true" />
     </div>
 
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Drives</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Triggers</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr v-for="campaign in campaigns" :key="campaign.id" class="hover:bg-gray-50">
-            <td class="px-6 py-4">
-              <router-link :to="`/campaigns/${campaign.id}`" class="text-primary-600 hover:underline">
-                {{ campaign.name }}
-              </router-link>
-            </td>
-            <td class="px-6 py-4 text-gray-500">{{ campaign.client_name || '-' }}</td>
-            <td class="px-6 py-4">
-              <span :class="[statusColors[campaign.status], 'px-2 py-1 text-xs rounded-full']">
-                {{ campaign.status }}
-              </span>
-            </td>
-            <td class="px-6 py-4 text-gray-500">{{ campaign.drive_count }}</td>
-            <td class="px-6 py-4 text-gray-500">{{ campaign.triggered_count }}</td>
-            <td class="px-6 py-4">
-              <router-link :to="`/campaigns/${campaign.id}`" class="text-primary-600 hover:underline text-sm">
-                View
-              </router-link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="bg-surface-900 border border-surface-700 rounded-lg overflow-hidden">
+      <DataTable :value="campaigns" :loading="loading" stripedRows
+        tableClass="w-full" :rowHover="true"
+        emptyMessage="No campaigns found">
+        <Column field="name" header="Name">
+          <template #body="{ data }">
+            <router-link :to="`/campaigns/${data.id}`" class="text-primary-400 hover:underline">
+              {{ data.name }}
+            </router-link>
+          </template>
+        </Column>
+        <Column field="client_name" header="Client">
+          <template #body="{ data }">
+            <span class="text-surface-300">{{ data.client_name || '-' }}</span>
+          </template>
+        </Column>
+        <Column field="status" header="Status">
+          <template #body="{ data }">
+            <Tag :value="data.status" :severity="statusSeverity[data.status] || 'secondary'" />
+          </template>
+        </Column>
+        <Column field="drive_count" header="Drives">
+          <template #body="{ data }">
+            <span class="text-surface-300">{{ data.drive_count }}</span>
+          </template>
+        </Column>
+        <Column field="triggered_count" header="Triggers">
+          <template #body="{ data }">
+            <span class="text-surface-300">{{ data.triggered_count }}</span>
+          </template>
+        </Column>
+        <Column header="Actions">
+          <template #body="{ data }">
+            <router-link :to="`/campaigns/${data.id}`" class="text-primary-400 hover:underline text-sm">
+              View
+            </router-link>
+          </template>
+        </Column>
+      </DataTable>
     </div>
 
-    <!-- Create Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 class="text-lg font-medium mb-4">Create Campaign</h2>
-        <form @submit.prevent="createCampaign" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Name</label>
-            <input v-model="newCampaign.name" type="text" required
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Client Name</label>
-            <input v-model="newCampaign.client_name" type="text"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea v-model="newCampaign.description" rows="3"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button type="button" @click="showCreateModal = false"
-              class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Cancel</button>
-            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
-              Create
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <!-- Create Dialog -->
+    <Dialog v-model:visible="showCreateModal" header="Create Campaign" modal :style="{ width: '28rem' }">
+      <form @submit.prevent="createCampaign" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Name</label>
+          <InputText v-model="newCampaign.name" required class="w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Client Name</label>
+          <InputText v-model="newCampaign.client_name" class="w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-1">Description</label>
+          <Textarea v-model="newCampaign.description" rows="3" class="w-full" />
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <Button label="Cancel" severity="secondary" text @click="showCreateModal = false" />
+          <Button type="submit" label="Create" />
+        </div>
+      </form>
+    </Dialog>
   </div>
 </template>
